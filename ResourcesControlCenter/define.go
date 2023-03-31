@@ -1,458 +1,184 @@
 package ResourcesControlCenter
 
 import (
-	"fmt"
 	"phoenixbuilder/minecraft/protocol"
 	"phoenixbuilder/minecraft/protocol/packet"
 	"sync"
-	"sync/atomic"
 
 	"github.com/google/uuid"
 )
 
-// ------------------------- commandRequestWithResponce -------------------------
+/*
+管理 PhoenixBuilder 的各类公用资源。
 
-// 测定 key 是否在 c.commandRequest.datas 中。如果存在，那么返回真，否则返回假
-func (c *commandRequestWithResponce) testRequest(key uuid.UUID) bool {
-	c.commandRequest.lockDown.RLock()
-	defer c.commandRequest.lockDown.RUnlock()
-	// init
-	_, ok := c.commandRequest.datas[key]
-	return ok
-	// return
+值得说明的是，此结构体的出现将会意味着 UQHolder 的弃用 [TODO]
+*/
+type Resources struct {
+	// 如果当前结构体是在 PhoenixBuilder 启动时取得的，
+	// 那么此认证结果为真，否则为假 。
+	// 此参数有助于验证公用资源的唯一性，因为公用资源在内存中至多存在一个
+	verified bool
+	// 管理命令请求队列及命令返回值
+	Command commandRequestWithResponce
+	// 管理本地库存数据，如背包物品
+	Inventory inventoryContents
+	// 管理物品操作请求及结果
+	ItemStackOperation itemStackReuqestWithResponce
+	// 管理容器资源的占用状态，同时存储容器操作的结果
+	Container container
 }
 
-// 测定 key 是否在 c.commandResponce.datas 中。如果存在，那么返回真，否则返回假
-func (c *commandRequestWithResponce) testResponce(key uuid.UUID) bool {
-	c.commandResponce.lockDown.RLock()
-	defer c.commandResponce.lockDown.RUnlock()
-	// init
-	_, ok := c.commandResponce.datas[key]
-	return ok
-	// return
+// 描述客户端的基本信息
+type BotInfo struct {
+	BotName      string // 客户端的游戏昵称
+	BotIdentity  string // 客户端的唯一标识符 [当前还未使用]
+	BotUniqueID  int64  // 客户端的唯一 ID [当前还未使用]
+	BotRunTimeID uint64 // 客户端的运行时 ID
 }
 
-// 将名为 key 的命令请求放入 c.commandRequest.datas 并占用(锁定)此请求对应的互斥锁
-func (c *commandRequestWithResponce) writeRequest(key uuid.UUID) error {
-	if c.testRequest(key) {
-		return fmt.Errorf("writeRequest: %v is already exist in c.commandRequest.datas", key.String())
-	}
-	// if key is already exist
-	c.commandRequest.lockDown.Lock()
-	// lock down resources
-	c.commandRequest.datas[key] = &sync.Mutex{}
-	c.commandRequest.datas[key].Lock()
-	// lock down command request
-	c.commandRequest.lockDown.Unlock()
-	// unlock resources
-	return nil
-	// return
+// 用于 PhoenixBuilder 与租赁服交互的 API
+type BridgeToServer struct {
+	WritePacket func(packet.Packet) error // 用于向租赁服发送数据包的函数
+	BotInfo     BotInfo                   // 存储客户端的基本信息
+	Resources   *Resources                // PhoenixBuilder 的各类公用资源
 }
 
-// 将名为 key 的命令请求从 c.commandRequest.datas 中移除并释放此请求对应的互斥锁
-func (c *commandRequestWithResponce) deleteRequest(key uuid.UUID) error {
-	if !c.testRequest(key) {
-		return fmt.Errorf("deleteRequest: %v is not recorded in c.commandRequest.datas", key.String())
+// 存放命令请求及结果
+type commandRequestWithResponce struct {
+	// 命令请求队列
+	commandRequest struct {
+		// 防止并发读写而设置的读写锁
+		lockDown sync.RWMutex
+		// 存放命令请求的等待队列。
+		// 每次写入请求后将会自动为此请求上锁以便于阻塞
+		datas map[uuid.UUID]*sync.Mutex
 	}
-	// if key is not exist
-	c.commandRequest.lockDown.Lock()
-	// lock down resources
-	tmp := c.commandRequest.datas[key]
-	// get tmp of the current resources
-	delete(c.commandRequest.datas, key)
-	newMap := map[uuid.UUID]*sync.Mutex{}
-	for k, value := range c.commandRequest.datas {
-		newMap[k] = value
+	// 命令请求的返回值
+	commandResponce struct {
+		// 防止并发读写而设置的读写锁
+		lockDown sync.RWMutex
+		// 存放命令返回值。
+		// 每次写入返回值后将会自动为对应等待队列中的读写锁解锁
+		datas map[uuid.UUID]packet.CommandOutput
 	}
-	c.commandRequest.datas = newMap
-	// remove the key and values from c.commandRequest.datas
-	c.commandRequest.lockDown.Unlock()
-	// unlock resources
-	tmp.Unlock()
-	// unlock command request
-	return nil
-	// return
 }
 
-// 将命令请求的返回值写入 c.commandResponce.datas 并释放 c.commandRequest.datas 中对应的互斥锁
-func (c *commandRequestWithResponce) writeResponce(key uuid.UUID, resp packet.CommandOutput) error {
-	c.commandResponce.lockDown.Lock()
-	defer c.commandResponce.lockDown.Unlock()
-	// init
-	c.commandResponce.datas[key] = resp
-	// send command responce
-	err := c.deleteRequest(key)
-	if err != nil {
-		return fmt.Errorf("writeResponce: %v", err)
-	}
-	// remove command reuqest from c.commandRequest.datas
-	return nil
-	// return
+// 存放所有有效库存中的物品数据，例如背包和盔甲栏
+type inventoryContents struct {
+	// 防止并发读写而设置的读写锁
+	lockDown sync.RWMutex
+	// int32 代表打开的库存的窗口 ID ，即 WindowID ；
+	// uint8 代表物品所在的槽位；
+	// 最内层的 protocol.ItemInstance 存放物品数据
+	datas map[uint32]map[uint8]protocol.ItemInstance
 }
-
-// 从 c.commandResponce.datas 读取名为 key 的命令请求的返回值并将此返回值从 c.commandResponce.datas 移除
-func (c *commandRequestWithResponce) loadResponceAndDelete(key uuid.UUID) (packet.CommandOutput, error) {
-	if !c.testResponce(key) {
-		return packet.CommandOutput{}, fmt.Errorf("loadResponceAndDelete: %v is not recorded in c.commandResponce.datas", key.String())
-	}
-	// if key is not exist
-	c.commandResponce.lockDown.Lock()
-	// lock down resources
-	ans := c.commandResponce.datas[key]
-	newMap := map[uuid.UUID]packet.CommandOutput{}
-	for k, value := range c.commandResponce.datas {
-		newMap[k] = value
-	}
-	c.commandResponce.datas = newMap
-	// get responce and remove the key and values from c.commandResponce.datas
-	c.commandResponce.lockDown.Unlock()
-	// unlock resources
-	return ans, nil
-	// return
-}
-
-// 等待租赁服响应命令请求 key 。在调用此函数后，会持续阻塞直到此命令请求所对应的互斥锁被释放
-func (c *commandRequestWithResponce) awaitResponce(key uuid.UUID) {
-	if !c.testRequest(key) {
-		return
-	}
-	// if key is not exist
-	c.commandRequest.lockDown.RLock()
-	// lock down resources
-	tmp := c.commandRequest.datas[key]
-	// get tmp of the current resources
-	c.commandRequest.lockDown.RUnlock()
-	// unlock resources
-	tmp.Lock()
-	tmp.Unlock()
-	// await responce
-}
-
-// ------------------------- inventoryContents -------------------------
-
-// 列出所有可访问库存的窗口 ID ，即 WindowID
-func (i *inventoryContents) ListWindowID() []uint32 {
-	i.lockDown.RLock()
-	defer i.lockDown.RUnlock()
-	// init
-	ans := []uint32{}
-	for key := range i.datas {
-		ans = append(ans, key)
-	}
-	// get window id list
-	return ans
-	// return
-}
-
-// 列出指定窗口 ID 所对应库存中的所有已记录槽位
-func (i *inventoryContents) ListSlot(windowID uint32) ([]uint8, error) {
-	i.lockDown.RLock()
-	defer i.lockDown.RUnlock()
-	// init
-	got, ok := i.datas[windowID]
-	if !ok {
-		return []uint8{}, fmt.Errorf("ListSlot: %v is not recorded in i.datas; i.datas = %#v", windowID, i.datas)
-	}
-	// if windowsID is not exist
-	ans := []uint8{}
-	for key := range got {
-		ans = append(ans, key)
-	}
-	// get slots list
-	return ans, nil
-	// return
-}
-
-// 获取 windowID 所对应的库存数据
-func (i *inventoryContents) GetInventoryInfo(windowID uint32) (map[uint8]protocol.ItemInstance, error) {
-	i.lockDown.RLock()
-	defer i.lockDown.RUnlock()
-	// init
-	ans, ok := i.datas[windowID]
-	if !ok {
-		return map[uint8]protocol.ItemInstance{}, fmt.Errorf("GetInventoryInfo: %v is not recorded in i.datas; i.datas = %#v", windowID, i.datas)
-	}
-	// if windowsID is not exist
-	return ans, nil
-	// return
-}
-
-// 从 windowID 库存中获取 slotLocation 槽位的物品数据
-func (i *inventoryContents) GetItemStackInfo(windowID uint32, slotLocation uint8) (protocol.ItemInstance, error) {
-	i.lockDown.RLock()
-	defer i.lockDown.RUnlock()
-	// init
-	got, ok := i.datas[windowID]
-	if !ok {
-		return protocol.ItemInstance{}, fmt.Errorf("GetItemStackInfo: %v is not recorded in i.datas; i.datas = %#v", windowID, i.datas)
-	}
-	// if windowsID is not exist
-	ans, ok := got[slotLocation]
-	if !ok {
-		return protocol.ItemInstance{}, fmt.Errorf("GetItemStackInfo: %v is not recorded in i.datas[%v]; i.datas[%v] = %#v", slotLocation, windowID, windowID, i.datas[windowID])
-	}
-	// if slot is not exist
-	return ans, nil
-	// return
-}
-
-// 修改 windowID 库存中 slotLocation 槽位的物品数据
-func (i *inventoryContents) WriteItemStackInfo(windowID uint32, slotLocation uint8, itemStackInfo protocol.ItemInstance) {
-	i.lockDown.Lock()
-	defer i.lockDown.Unlock()
-	// init
-	if i.datas == nil {
-		i.datas = make(map[uint32]map[uint8]protocol.ItemInstance)
-	}
-	if i.datas[windowID] == nil {
-		i.datas[windowID] = make(map[uint8]protocol.ItemInstance)
-	}
-	// make
-	i.datas[windowID][slotLocation] = itemStackInfo
-	// write datas
-}
-
-// 删除 windowID 所对应的库存。例如，当容器被关闭后，那么可以通过此函数删除此容器的库存数据，属于私有实现
-func (i *inventoryContents) deleteInventory(windowID uint32) error {
-	i.lockDown.Lock()
-	defer i.lockDown.Unlock()
-	// init
-	_, ok := i.datas[windowID]
-	if !ok {
-		return fmt.Errorf("deleteInventory: %v is not recorded in i.datas; i.datas = %#v", windowID, i.datas)
-	}
-	// if windowID is not exist
-	delete(i.datas, windowID)
-	newMap := map[uint32]map[uint8]protocol.ItemInstance{}
-	for key, value := range i.datas {
-		newMap[key] = value
-	}
-	i.datas = newMap
-	// remove inventory from i.datas
-	return nil
-	// return
-}
-
-// ------------------------- itemStackReuqestWithResponce -------------------------
-
-// 测定请求 ID 为 key 的物品操作请求是否在 i.itemStackRequest.datas 中。
-// 如果存在，那么返回真，否则返回假
-func (i *itemStackReuqestWithResponce) TestRequest(key int32) bool {
-	i.itemStackRequest.lockDown.RLock()
-	defer i.itemStackRequest.lockDown.RUnlock()
-	// init
-	_, ok := i.itemStackRequest.datas[key]
-	return ok
-	// return
-}
-
-// 测定请求 ID 为 key 的物品操作请求 key 是否在 i.itemStackResponce.datas 中。
-// 如果存在，那么返回真，否则返回假
-func (i *itemStackReuqestWithResponce) TestResponce(key int32) bool {
-	i.itemStackResponce.lockDown.RLock()
-	defer i.itemStackResponce.lockDown.RUnlock()
-	// init
-	_, ok := i.itemStackResponce.datas[key]
-	return ok
-	// return
-}
-
-// 将请求 ID 为 key 的物品操作请求放入 i.itemStackRequest.datas 并占用(锁定)此请求对应的互斥锁
-func (i *itemStackReuqestWithResponce) WriteRequest(key int32) error {
-	if i.TestRequest(key) {
-		return fmt.Errorf("WriteRequest: %v is already exist in i.itemStackRequest.datas", key)
-	}
-	// if key is already exist
-	i.itemStackRequest.lockDown.Lock()
-	// lock down resources
-	i.itemStackRequest.datas[key] = &sync.Mutex{}
-	i.itemStackRequest.datas[key].Lock()
-	// lock down item stack request
-	i.itemStackRequest.lockDown.Unlock()
-	// unlock resources
-	return nil
-	// return
-}
-
-// 将请求 ID 为 key 的物品操作请求从 i.itemStackRequest.datas 中移除并释放此请求对应的互斥锁
-func (i *itemStackReuqestWithResponce) DeleteRequest(key int32) error {
-	if !i.TestRequest(key) {
-		return fmt.Errorf("DeleteRequest: %v is not recorded in i.itemStackRequest.datas", key)
-	}
-	// if key is not exist
-	i.itemStackRequest.lockDown.Lock()
-	// lock down resources
-	tmp := i.itemStackRequest.datas[key]
-	// get tmp of the current resources
-	delete(i.itemStackRequest.datas, key)
-	newMap := map[int32]*sync.Mutex{}
-	for k, value := range i.itemStackRequest.datas {
-		newMap[k] = value
-	}
-	i.itemStackRequest.datas = newMap
-	// remove the key and values from i.itemStackRequest.datas
-	i.itemStackRequest.lockDown.Unlock()
-	// unlock resources
-	tmp.Unlock()
-	// unlock item stack request
-	return nil
-	// return
-}
-
-// 将请求 ID 为 key 的物品操作请求的返回值写入 i.itemStackResponce.datas
-// 并释放 i.itemStackRequest.datas 中对应的互斥锁，属于私有实现
-func (i *itemStackReuqestWithResponce) writeResponce(key int32, resp protocol.ItemStackResponse) error {
-	i.itemStackResponce.lockDown.Lock()
-	defer i.itemStackResponce.lockDown.Unlock()
-	// init
-	i.itemStackResponce.datas[key] = resp
-	// send item stack responce
-	err := i.DeleteRequest(key)
-	if err != nil {
-		return fmt.Errorf("writeResponce: %v", err)
-	}
-	// remove item stack reuqest from i.itemStackRequest.datas
-	return nil
-	// return
-}
-
-// 从 i.itemStackResponce.datas 读取请求 ID 为 key 的物品操作请求的返回值
-// 并将此返回值从 i.itemStackResponce.datas 移除
-func (i *itemStackReuqestWithResponce) LoadResponceAndDelete(key int32) (protocol.ItemStackResponse, error) {
-	if !i.TestResponce(key) {
-		return protocol.ItemStackResponse{}, fmt.Errorf("LoadResponceAndDelete: %v is not recorded in i.itemStackResponce.datas", key)
-	}
-	// if key is not exist
-	i.itemStackResponce.lockDown.Lock()
-	// lock down resources
-	ans := i.itemStackResponce.datas[key]
-	newMap := map[int32]protocol.ItemStackResponse{}
-	for k, value := range i.itemStackResponce.datas {
-		newMap[k] = value
-	}
-	i.itemStackResponce.datas = newMap
-	// get responce and remove the key and values from i.itemStackResponce.datas
-	i.itemStackResponce.lockDown.Unlock()
-	// unlock resources
-	return ans, nil
-	// return
-}
-
-// 等待租赁服响应请求 ID 为 key 的物品操作请求。
-// 在调用此函数后，会持续阻塞直到此物品操作请求所对应的互斥锁被释放
-func (i *itemStackReuqestWithResponce) AwaitResponce(key int32) {
-	if !i.TestRequest(key) {
-		return
-	}
-	// if key is not exist
-	i.itemStackRequest.lockDown.RLock()
-	// lock down resources
-	tmp := i.itemStackRequest.datas[key]
-	// get tmp of the current resources
-	i.itemStackRequest.lockDown.RUnlock()
-	// unlock resources
-	tmp.Lock()
-	tmp.Unlock()
-	// await responce
-}
-
-// 以原子操作获取上一次的请求 ID ，也就是 RequestID 。
-// 如果从未进行过物品操作，则将会返回 1
-func (i *itemStackReuqestWithResponce) GetCurrentRequestID() int32 {
-	return atomic.LoadInt32(&i.requestID)
-}
-
-// 以原子操作获取一个唯一的请求 ID ，也就是 RequestID
-func (i *itemStackReuqestWithResponce) GetNewRequestID() int32 {
-	return atomic.AddInt32(&i.requestID, -2)
-}
-
-// ------------------------- container -------------------------
 
 /*
-占用客户端的容器资源。
-当 tryMode 为真时，将尝试占用资源并返回占用结果，此对应返回值 bool 部分。
-若 tryMode 为假，则返回值 bool 部分永远为真。
-无论 tryMode 的真假如何，当且仅当函数调用者成功占用资源时，
-才会在 *sync.Mutex 部分返回互斥锁，否则此参数返回 nil 。
-如果后续要释放此资源，那么请直接调用返回的互斥锁的 Unlock 函数
+存放物品操作请求及结果。
+
+重要：
+任何物品操作都应该通过此结构体下的有关实现来完成，否则可能会造成严重后果。
+因此，为了绝对的安全，如果尝试绕过相关实现而直接发送物品操作数据包，则会造成程序惊慌。
 */
-func (c *container) Occupy(tryMode bool) (bool, *sync.Mutex) {
-	if tryMode {
-		success := c.isUsing.TryLock()
-		if success {
-			return true, &c.isUsing
-		} else {
-			return false, nil
-		}
+type itemStackReuqestWithResponce struct {
+	// 物品操作请求队列
+	itemStackRequest struct {
+		// 防止并发读写而设置的读写锁
+		lockDown sync.RWMutex
+		// 存放物品操作请求的等待队列。
+		// 每次写入请求后将会自动为此请求上锁以便于阻塞
+		datas map[int32]singleItemStackRequest
 	}
-	// if is try mode
-	c.isUsing.Lock()
-	// lock down resources
-	return true, &c.isUsing
-	// return
+	// 物品操作的结果
+	itemStackResponce struct {
+		// 防止并发读写而设置的读写锁
+		lockDown sync.RWMutex
+		// 存放物品操作的结果。
+		// 每次写入返回值后将会自动为对应等待队列中的读写锁解锁。
+		datas map[int32]protocol.ItemStackResponse
+	}
+	/*
+		记录已累计的 RequestID 。
+
+		客户端在发送 ItemStackRequest 时需要发送一个 RequestID 。
+		经过观察，这个值会随着请求发送的次数递减，且呈现为公差为 -2，
+		首项为 -1 的递减型等差数列。
+
+		特别地，如果你尝试在 RequestID 字段填写非负数或者偶数，
+		那么客户端会被租赁服强制断开连接。
+
+		尽管始终为 ItemStackRequest 的 RequestID 字段填写 -1 并不会造成造成断开连接的发生，
+		但这样并不能保证物品操作的唯一性。
+
+		因此，绝对地，请使用已提供的 API 发送物品操作请求，否则将导致程序惊慌
+	*/
+	currentRequestID int32
 }
 
-// 强制释放容器资源，当且仅当租赁服强制关闭容器时会被使用，属于私有实现
-func (c *container) release() {
-	c.isUsing.TryLock()
-	c.isUsing.Unlock()
+// 每个物品操作请求都会使用这样一个结构体，它用于描述单个的物品操作请求
+type singleItemStackRequest struct {
+	// 每个物品操作请求在发送前都应该上锁它以便于后续等待返回值时的阻塞
+	lockDown *sync.Mutex
+	// 描述多个库存(容器)中物品的变动结果。
+	// 租赁服不会在返回 ItemStackResponce 时返回完整的物品数据，因此需要您提供对应
+	// 槽位的更改结果以便于我们依此更新本地存储的库存数据
+	datas []StackRequestContainerInfo
 }
 
-// 用于在 打开/关闭 容器前执行，便于后续调用 AwaitResponceAfterSendPacket 以阻塞程序的执行从而
-// 达到等待租赁服响应容器操作的目的
-func (c *container) AwaitResponceBeforeSendPacket() {
-	c.awaitChanges.Lock()
+// 描述单个库存(容器)中物品的变动结果
+type StackRequestContainerInfo struct {
+	// 此容器的容器 ID
+	ContainerID uint8
+	// 其容器对应库存的窗口 ID
+	WindowID uint32
+	// 描述此容器中每个槽位的变动结果，键代表槽位编号，而值代表物品的新值。
+	// 特别地，您无需设置物品数量和 NBT 中的物品名称以及物品的 StackNetworkID 信息，因为
+	// 这些数据会在租赁服发回 ItemStackResponce 后被重新设置
+	ChangeResult map[uint8]protocol.ItemInstance
 }
 
-// 等待租赁服响应容器的打开或关闭操作。在调用此函数后，会持续阻塞直到相关操作所对应的互斥锁被释放
-func (c *container) AwaitResponceAfterSendPacket() {
-	c.awaitChanges.Lock()
-	c.awaitChanges.Unlock()
-}
+/*
+存储容器的 打开/关闭 状态，同时存储容器资源的占用状态。
 
-// 释放 c.awaitChanges 中关于容器操作的互斥锁。如果互斥锁未被锁定，程序也仍不会发生惊慌。
-// 当且仅当租赁服确认客户端的容器操作时，此函数才会被调用。
-// 属于私有实现
-func (c *container) releaseAwaitGoRoutine() {
-	c.awaitChanges.TryLock()
-	c.awaitChanges.Unlock()
-}
+重要：
+容器由于是 PhoenixBuilder 的其中一个公用资源，因此为了公平性，
+现在由我们(资源管理中心)负责完成对该公用资源的占用和释放之实现。
 
-// 将 datas 写入 c.containerOpen.datas ，属于私有实现
-func (c *container) writeContainerOpenDatas(datas packet.ContainerOpen) {
-	c.containerOpen.lockDown.Lock()
-	defer c.containerOpen.lockDown.Unlock()
-	// init
-	c.containerOpen.datas = datas
-	// set values
-}
+因此，为了绝对的安全，如果尝试绕过相关实现而直接 打开/关闭 容器，则会造成程序惊慌。
 
-// 取得当前已打开容器的数据。如果容器未被打开或已被关闭，则会返回一个刚被初始化的结构体
-func (c *container) GetContainerOpenDatas() packet.ContainerOpen {
-	c.containerOpen.lockDown.RLock()
-	defer c.containerOpen.lockDown.RUnlock()
-	// init
-	return c.containerOpen.datas
-	// return
-}
+任何时刻，如果你需要打开或关闭容器，或者在某一段时间内使用某容器，则请提前占用此资源，
+然后再发送相应数据包，完成后再释放此公用资源
+*/
+type container struct {
+	// 容器被打开时的数据
+	containerOpen struct {
+		// 防止并发读写而设置的读写锁
+		lockDown sync.RWMutex
+		// 当客户端打开容器后，租赁服会以此数据包回应，届时此变量将被赋值。
+		// 当容器被关闭或从未被打开，则此变量将会为 nil
+		datas *packet.ContainerOpen
+	}
+	// 容器被关闭时的数据
+	containerClose struct {
+		// 防止并发读写而设置的读写锁
+		lockDown sync.RWMutex
+		/*
+			客户端可以使用该数据包关闭已经打开的容器，
+			而后，租赁服会以相同的数据包回应容器的关闭。
 
-// 将 datas 写入 c.containerClose.datas ，属于私有实现
-func (c *container) writeContainerCloseDatas(datas packet.ContainerClose) {
-	c.containerClose.lockDown.Lock()
-	defer c.containerClose.lockDown.Unlock()
-	// init
-	c.containerClose.datas = datas
-	// set values
+			当侦测到来自租赁服的响应，此变量将被赋值。
+			当容器被打开或从未被关闭，则此变量将会为 nil
+		*/
+		datas *packet.ContainerClose
+	}
+	// 其他实现在打开或关闭容器后可能需要等待回应，此互斥锁便是为了完成这一实现
+	awaitChanges sync.Mutex
+	// PhoenixBuilder 同一时刻至多打开一个容器。此互斥锁是为了解决资源纠纷问题而设
+	isUsing struct {
+		// 当容器资源被占用时此互斥锁将会被锁定，否则反之
+		lockDown sync.Mutex
+		// 记录容器资源的占用者，用于确保资源释放者是占用者本身。
+		// 此处应该记录一个 UUID
+		holder string
+	}
 }
-
-// 取得上次关闭容器时租赁服的响应数据。如果现在有容器已被打开或容器从未被关闭，则会返回一个刚被初始化的结构体
-func (c *container) GetContainerCloseDatas() packet.ContainerClose {
-	c.containerClose.lockDown.RLock()
-	defer c.containerClose.lockDown.RUnlock()
-	// init
-	return c.containerClose.datas
-	// return
-}
-
-// ------------------------- end -------------------------

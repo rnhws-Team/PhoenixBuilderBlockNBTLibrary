@@ -28,21 +28,6 @@ type Resources struct {
 	Container container
 }
 
-// 描述客户端的基本信息
-type BotInfo struct {
-	BotName      string // 客户端的游戏昵称
-	BotIdentity  string // 客户端的唯一标识符 [当前还未使用]
-	BotUniqueID  int64  // 客户端的唯一 ID [当前还未使用]
-	BotRunTimeID uint64 // 客户端的运行时 ID
-}
-
-// 用于 PhoenixBuilder 与租赁服交互的 API
-type BridgeToServer struct {
-	WritePacket func(packet.Packet) error // 用于向租赁服发送数据包的函数
-	BotInfo     BotInfo                   // 存储客户端的基本信息
-	Resources   *Resources                // PhoenixBuilder 的各类公用资源
-}
-
 // 存放命令请求及结果
 type commandRequestWithResponce struct {
 	// 命令请求队列
@@ -115,6 +100,9 @@ type itemStackReuqestWithResponce struct {
 	currentRequestID int32
 }
 
+// 描述一个容器 ID
+type ContainerID uint8
+
 // 每个物品操作请求都会使用这样一个结构体，它用于描述单个的物品操作请求
 type singleItemStackRequest struct {
 	// 每个物品操作请求在发送前都应该上锁它以便于后续等待返回值时的阻塞
@@ -122,13 +110,11 @@ type singleItemStackRequest struct {
 	// 描述多个库存(容器)中物品的变动结果。
 	// 租赁服不会在返回 ItemStackResponce 时返回完整的物品数据，因此需要您提供对应
 	// 槽位的更改结果以便于我们依此更新本地存储的库存数据
-	datas []StackRequestContainerInfo
+	datas map[ContainerID]StackRequestContainerInfo
 }
 
 // 描述单个库存(容器)中物品的变动结果
 type StackRequestContainerInfo struct {
-	// 此容器的容器 ID
-	ContainerID uint8
 	// 其容器对应库存的窗口 ID
 	WindowID uint32
 	// 描述此容器中每个槽位的变动结果，键代表槽位编号，而值代表物品的新值。

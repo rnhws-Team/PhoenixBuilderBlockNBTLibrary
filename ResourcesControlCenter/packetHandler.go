@@ -34,16 +34,19 @@ func (r *Resources) handlePacket(pk *packet.Packet) {
 		// inventory contents(for enchant command...)
 	case *packet.ItemStackResponse:
 		for _, value := range p.Responses {
+			r.ItemStackOperation.updateItemData(value, &r.Inventory)
+			// update local inventory datas
 			err := r.ItemStackOperation.writeResponce(value.RequestID, value)
 			if err != nil {
-				panic("handlePacket: Attempt to send packet.ItemStackRequest without using Bdump/blockNBT API")
+				panic("handlePacket: Attempt to send packet.ItemStackRequest without using ResourcesControlCenter")
 			}
+			// write responce
 		}
 		// item stack request
 	case *packet.ContainerOpen:
 		unsuccess, _ := r.Container.Occupy(true)
 		if unsuccess {
-			panic("handlePacket: Attempt to send packet.ContainerOpen without using Bdump/blockNBT API")
+			panic("handlePacket: Attempt to send packet.ContainerOpen without using ResourcesControlCenter")
 		}
 		r.Container.writeContainerCloseDatas(nil)
 		r.Container.writeContainerOpenDatas(p)
@@ -59,7 +62,7 @@ func (r *Resources) handlePacket(pk *packet.Packet) {
 		if !p.ServerSide {
 			unsuccess, _ := r.Container.Occupy(true)
 			if unsuccess {
-				panic("handlePacket: Attempt to send packet.ContainerClose without using Bdump/blockNBT API")
+				panic("handlePacket: Attempt to send packet.ContainerClose without using ResourcesControlCenter")
 			}
 		} else {
 			r.Container.responceContainerOperation()

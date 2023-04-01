@@ -30,11 +30,11 @@ func (i *itemStackReuqestWithResponce) TestResponce(key int32) bool {
 }
 
 // 将物品请求 ID 为 key 的物品操作放入 i.itemStackRequest.datas ，
-// 并占用(锁定)此请求对应的互斥锁。
+// 并占用(锁定)此请求对应的互斥锁 i.itemStackRequest.datas[key].lockDown 。
 // datas 指代相应槽位的变动结果，这用于更新本地库存数据
 func (i *itemStackReuqestWithResponce) WriteRequest(
 	key int32,
-	datas []StackRequestContainerInfo,
+	datas map[ContainerID]StackRequestContainerInfo,
 ) error {
 	if i.TestRequest(key) {
 		return fmt.Errorf("WriteRequest: %v is already exist in i.itemStackRequest.datas", key)
@@ -67,8 +67,9 @@ func (i *itemStackReuqestWithResponce) LoadRequest(key int32) (singleItemStackRe
 }
 
 // 将请求 ID 为 key 的物品操作请求从 i.itemStackRequest.datas 中移除
-// 并释放此请求对应的互斥锁
-func (i *itemStackReuqestWithResponce) DeleteRequest(key int32) error {
+// 并释放此请求对应的互斥锁 i.itemStackRequest.datas[key].lockDown 。
+// 属于私有实现
+func (i *itemStackReuqestWithResponce) deleteRequest(key int32) error {
 	if !i.TestRequest(key) {
 		return fmt.Errorf("DeleteRequest: %v is not recorded in i.itemStackRequest.datas", key)
 	}
@@ -92,14 +93,14 @@ func (i *itemStackReuqestWithResponce) DeleteRequest(key int32) error {
 }
 
 // 将请求 ID 为 key 的物品操作请求的返回值写入 i.itemStackResponce.datas
-// 并释放 i.itemStackRequest.datas 中对应的互斥锁，属于私有实现
+// 并释放 i.itemStackRequest.datas[key].lockDown 中对应的互斥锁，属于私有实现
 func (i *itemStackReuqestWithResponce) writeResponce(key int32, resp protocol.ItemStackResponse) error {
 	i.itemStackResponce.lockDown.Lock()
 	defer i.itemStackResponce.lockDown.Unlock()
 	// init
 	i.itemStackResponce.datas[key] = resp
 	// send item stack responce
-	err := i.DeleteRequest(key)
+	err := i.deleteRequest(key)
 	if err != nil {
 		return fmt.Errorf("writeResponce: %v", err)
 	}
@@ -157,9 +158,80 @@ func (i *itemStackReuqestWithResponce) GetNewRequestID() int32 {
 	return atomic.AddInt32(&i.currentRequestID, -2)
 }
 
+// 根据 newItem 中预期的新数据和租赁服返回的 resp ，
+// 返回完整的新物品数据
 func (i *itemStackReuqestWithResponce) GetNewItemData(
-	key int32,
-	resp protocol.ItemStackResponse,
-) {
+	newItem protocol.ItemInstance,
+	resp protocol.StackResponseSlotInfo,
+) (protocol.ItemInstance, error) {
+	nbt := newItem.Stack.NBTData
+	// 获取物品的旧 NBT 数据
+	if resp.CustomName != "" {
+		_, ok := nbt["tag"]
+		if !ok {
+			nbt["tag"] = map[string]interface{}{}
+		}
+		tag, normal := nbt["tag"].(map[string]interface{})
+		if !normal {
+			return protocol.ItemInstance{}, fmt.Errorf("getNewItemData: Failed to convert nbt[\"tag\"] into map[string]interface{}; nbt = %#v", nbt)
+		}
+		// tag
+		_, ok = tag["display"]
+		if !ok {
+			tag["display"] = map[string]interface{}{}
+			nbt["tag"].(map[string]interface{})["display"] = map[string]interface{}{}
+		}
+		_, normal = tag["display"].(map[string]interface{})
+		if !normal {
+			return protocol.ItemInstance{}, fmt.Errorf("getNewItemData: Failed to convert tag[\"display\"] into map[string]interface{}; tag = %#v", tag)
+		}
+		// display
+		nbt["tag"].(map[string]interface{})["display"].(map[string]interface{})["Name"] = resp.CustomName
+		// name
+	}
+	// set names
+	newItem.Stack.NBTData = nbt
+	newItem.Stack.Count = uint16(resp.Count)
+	newItem.StackNetworkID = resp.StackNetworkID
+	// update values
+	return newItem, nil
+	// return
+}
 
+// 根据租赁服返回的 resp 字段更新对应库存中对应槽位的物品数据。
+// inventory 必须是一个指针，它指向了客户端唯一的库存数据。
+// 属于私有实现
+func (i *itemStackReuqestWithResponce) updateItemData(
+	resp protocol.ItemStackResponse,
+	inventory *inventoryContents,
+) error {
+	datas, err := i.LoadRequest(resp.RequestID)
+	if err != nil {
+		return fmt.Errorf("updateItemData: %v", err)
+	}
+	// get responce of the target item stack
+	for _, value := range resp.ContainerInfo {
+		if datas.datas == nil {
+			panic("updateItemData: Attempt to send packet.ItemStackRequest without using ResourcesControlCenter")
+		}
+		_, ok := datas.datas[ContainerID(value.ContainerID)]
+		if !ok {
+			panic(fmt.Sprintf("updateItemData: item change result %v not found or not provided(packet.ItemStackRequest related); datas.datas = %#v, value = %#v", ContainerID(value.ContainerID), datas.datas, value))
+		}
+		currentChanges := datas.datas[ContainerID(value.ContainerID)].ChangeResult
+		windowID := datas.datas[ContainerID(value.ContainerID)].WindowID
+		for _, v := range value.SlotInfo {
+			newItem, err := i.GetNewItemData(
+				currentChanges[v.Slot],
+				v,
+			)
+			if err != nil {
+				panic(fmt.Sprintf("updateItemData: Failed to get new item data; currentChanges[v.Slot] = %#v, v = %#v", currentChanges[v.Slot], v))
+			}
+			inventory.writeItemStackInfo(windowID, v.Slot, newItem)
+		}
+	}
+	// set item datas
+	return nil
+	// return
 }

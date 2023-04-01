@@ -12,12 +12,12 @@ import (
 var hasInited bool = false
 
 /*
-初始化 Resources 结构体。
+初始化 Resources 结构体并返回一个函数用于更新资源。
 
 此函数在每次启动 PhoenixBuilder 后至多调用一次，
 重复的调用会导致程序惊慌，因为客户端的各项资源在同一时刻至多存在一个
 */
-func (r *Resources) Init() {
+func (r *Resources) Init() func(pk *packet.Packet) {
 	if !hasInited {
 		hasInited = true
 	} else {
@@ -91,4 +91,6 @@ func (r *Resources) Init() {
 		},
 	}
 	// Container
+	return r.handlePacket
+	// return
 }

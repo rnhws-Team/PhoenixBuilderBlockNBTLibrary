@@ -115,10 +115,11 @@ func (c *commandRequestWithResponce) AwaitResponce(key uuid.UUID) {
 	}
 	// if key is not exist
 	c.commandRequest.lockDown.RLock()
-	defer c.commandRequest.lockDown.RUnlock()
 	// lock down resources
 	tmp := c.commandRequest.datas[key]
 	// get tmp of the current resources
+	c.commandRequest.lockDown.RUnlock()
+	// unlock resources
 	tmp.Lock()
 	tmp.Unlock()
 	// await responce

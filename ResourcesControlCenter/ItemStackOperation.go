@@ -138,10 +138,11 @@ func (i *itemStackReuqestWithResponce) AwaitResponce(key int32) {
 	}
 	// if key is not exist
 	i.itemStackRequest.lockDown.RLock()
-	defer i.itemStackRequest.lockDown.RUnlock()
 	// lock down resources
 	tmp := i.itemStackRequest.datas[key].lockDown
 	// get tmp of the current resources
+	i.itemStackRequest.lockDown.RUnlock()
+	// unlock resources
 	tmp.Lock()
 	tmp.Unlock()
 	// await responce

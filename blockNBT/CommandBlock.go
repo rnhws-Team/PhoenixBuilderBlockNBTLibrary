@@ -204,7 +204,6 @@ func (c *CommandBlock) PlaceCommandBlockWithLegacyMethod(
 	block *types.Module,
 	cfg *types.MainConfig,
 ) error {
-	c.NeedToPlaceBlock = false
 	var blockName string = "command_block"
 	c.CommandBlockDatas = CommandBlockDatas{
 		Command:            block.CommandBlockData.Command,

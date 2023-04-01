@@ -34,7 +34,7 @@ var apiIsUsing sync.Mutex
 // 带有 NBT 数据放置方块。
 // 若你也想参与对于方块实体的其他支持，
 // 另见 https://github.com/df-mc/dragonfly
-func PlaceBlockWithNBTDataRun(
+func PlaceBlockWithNBTData(
 	api *GlobalAPI.GlobalAPI,
 	blockInfo *types.Module,
 	datas *Datas,

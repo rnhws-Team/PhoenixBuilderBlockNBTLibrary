@@ -72,9 +72,6 @@ func (g *GlobalAPI) ChangeItemNameByUsingAnvil(
 	if !sucessStates {
 		return []bool{}, fmt.Errorf("ChangeItemNameByUsingAnvil: Failed to open the anvil block on %v", correctPos)
 	}
-	defer func() {
-		g.CloseContainer()
-	}()
 	// 打开铁砧
 	for _, value := range request {
 		datas, err := g.Resources.Inventory.GetItemStackInfo(0, value.Slot)

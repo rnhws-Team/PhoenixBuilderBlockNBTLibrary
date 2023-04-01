@@ -94,8 +94,12 @@ func (c *container) GetContainerOpenDatas() *packet.ContainerOpen {
 	c.containerOpen.lockDown.RLock()
 	defer c.containerOpen.lockDown.RUnlock()
 	// init
-	new := *c.containerOpen.datas
-	return &new
+	if c.containerOpen.datas == nil {
+		return nil
+	} else {
+		new := *c.containerOpen.datas
+		return &new
+	}
 	// return
 }
 
@@ -115,7 +119,11 @@ func (c *container) GetContainerCloseDatas() *packet.ContainerClose {
 	c.containerClose.lockDown.RLock()
 	defer c.containerClose.lockDown.RUnlock()
 	// init
-	new := *c.containerClose.datas
-	return &new
+	if c.containerClose.datas == nil {
+		return nil
+	} else {
+		new := *c.containerClose.datas
+		return &new
+	}
 	// return
 }

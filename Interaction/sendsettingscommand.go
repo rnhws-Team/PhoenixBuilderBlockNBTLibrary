@@ -8,7 +8,7 @@ import (
 // 向租赁服发送 Sizukana 命令且无视返回值
 func (g *GlobalAPI) SendSettingsCommand(command string, sendDimensionalCmd bool) error {
 	if sendDimensionalCmd {
-		command = fmt.Sprintf(`execute @a[name="%v"] ~ ~ ~ %v`, g.BotName, command)
+		command = fmt.Sprintf(`execute @a[name="%v"] ~ ~ ~ %v`, g.BotInfo.BotName, command)
 	}
 	err := g.WritePacket(&packet.SettingsCommand{
 		CommandLine:    command,

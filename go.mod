@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/atomicgo/cursor v0.0.1 // indirect
+	github.com/golang/snappy v0.0.1 // indirect
 	github.com/gookit/color v1.4.2 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
@@ -15,10 +16,13 @@ require (
 replace rogchap.com/v8go v0.7.0 => ./depends/v8go@v0.7.0
 
 require (
+	github.com/andybalholm/brotli v1.0.5
+	github.com/df-mc/goleveldb v1.1.9
 	github.com/go-gl/mathgl v1.0.0
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/klauspost/compress v1.13.6
+	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/muhammadmuzzammil1998/jsonc v0.0.0-20211230184646-baf1f7156737
 	github.com/pterm/pterm v0.12.29
 	github.com/sandertv/go-raknet v1.9.1

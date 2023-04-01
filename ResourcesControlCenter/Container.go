@@ -17,7 +17,7 @@ import (
 */
 func (c *container) Occupy(tryMode bool) (bool, string) {
 	newUUID, err := uuid.NewUUID()
-	if err != nil {
+	if err != nil || newUUID == uuid.Nil {
 		return c.Occupy(tryMode)
 	}
 	uniqueId := newUUID.String()
@@ -87,12 +87,15 @@ func (c *container) writeContainerOpenDatas(datas *packet.ContainerOpen) {
 	// set values
 }
 
-// 取得当前已打开容器的数据。如果容器未被打开或已被关闭，则会返回一个刚被初始化的结构体
-func (c *container) GetContainerOpenDatas() packet.ContainerOpen {
+// 取得当前已打开容器的数据。
+// 如果容器未被打开或已被关闭，则会返回 nil 。
+// 返回值虽然是一个地址，但它所指向的实际是一个副本
+func (c *container) GetContainerOpenDatas() *packet.ContainerOpen {
 	c.containerOpen.lockDown.RLock()
 	defer c.containerOpen.lockDown.RUnlock()
 	// init
-	return *c.containerOpen.datas
+	new := *c.containerOpen.datas
+	return &new
 	// return
 }
 
@@ -105,11 +108,14 @@ func (c *container) writeContainerCloseDatas(datas *packet.ContainerClose) {
 	// set values
 }
 
-// 取得上次关闭容器时租赁服的响应数据。如果现在有容器已被打开或容器从未被关闭，则会返回一个刚被初始化的结构体
-func (c *container) GetContainerCloseDatas() packet.ContainerClose {
+// 取得上次关闭容器时租赁服的响应数据。
+// 如果现在有容器已被打开或容器从未被关闭，则会返回 nil 。
+// 返回值虽然是一个地址，但它所指向的实际是一个副本
+func (c *container) GetContainerCloseDatas() *packet.ContainerClose {
 	c.containerClose.lockDown.RLock()
 	defer c.containerClose.lockDown.RUnlock()
 	// init
-	return *c.containerClose.datas
+	new := *c.containerClose.datas
+	return &new
 	// return
 }

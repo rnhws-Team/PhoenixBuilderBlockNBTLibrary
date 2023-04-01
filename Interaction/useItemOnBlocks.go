@@ -33,7 +33,7 @@ func (g *GlobalAPI) UseItemOnBlocks(
 		return fmt.Errorf("UseItemOnBlocks: %v", err)
 	}
 	// change selected hotbar slot
-	datas, err := g.PacketHandleResult.Inventory.GetItemStackInfo(0, hotBarSlotID)
+	datas, err := g.Resources.Inventory.GetItemStackInfo(0, hotBarSlotID)
 	if err != nil {
 		return fmt.Errorf("UseItemOnBlocks: %v", err)
 	}
@@ -58,7 +58,7 @@ func (g *GlobalAPI) UseItemOnBlocks(
 	}
 	// 发送这个数据包的必须的
 	err = g.WritePacket(&packet.PlayerAction{
-		EntityRuntimeID: g.BotRunTimeID,
+		EntityRuntimeID: g.BotInfo.BotRunTimeID,
 		ActionType:      protocol.PlayerActionStartBuildingBlock,
 		BlockPosition:   pos,
 	})

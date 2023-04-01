@@ -2,93 +2,65 @@ package GlobalAPI
 
 import (
 	"fmt"
+	"phoenixbuilder/ResourcesControlCenter"
 	"phoenixbuilder/minecraft/protocol"
 	"phoenixbuilder/minecraft/protocol/packet"
-	"sync"
 )
 
-// 向租赁服发送 ItemStackReuqest 并获取返回值。
-// 考虑到物品操作请求在被批准后租赁服不会返回其他数据包用以描述对应槽位的最终结果，
-// 因此在解决此问题前，此函数将暂时作为私有实现
-func (g *GlobalAPI) sendItemStackRequestWithResponce(request *packet.ItemStackRequest) ([]protocol.ItemStackResponse, error) {
+// 每个物品操作请求都会使用这样一个结构体，
+// 它用于描述单个的物品操作请求中各容器中各槽位的变动情况
+type ItemChangeDetails struct {
+	// 描述多个库存(容器)中物品的变动结果。
+	// 租赁服不会在返回 ItemStackResponce 时返回完整的物品数据，因此需要您提供对应
+	// 槽位的更改结果以便于我们依此更新本地存储的库存数据
+	details map[ResourcesControlCenter.ContainerID]ResourcesControlCenter.StackRequestContainerInfo
+}
+
+/*
+向租赁服发送 ItemStackReuqest 并获取返回值。
+request 指代已经构造好的物品操作请求，
+details 指代物品操作请求后物品的变动结果，这将用于更新本地库存数据。
+
+注意：
+1. 无论 request 中填写的 RequestID 是什么，它们最终会被覆写为正确的值；
+2. request.Requests[key] 与 details[key] 一一对应
+*/
+func (g *GlobalAPI) SendItemStackRequestWithResponce(
+	request *packet.ItemStackRequest,
+	details []ItemChangeDetails,
+) ([]protocol.ItemStackResponse, error) {
 	requestIDList := []int32{}
 	ans := []protocol.ItemStackResponse{}
 	// 初始化
 	for range request.Requests {
-		requestIDList = append(requestIDList, g.PacketHandleResult.ItemStackOperation.GetNewRequestID())
+		requestIDList = append(
+			requestIDList,
+			g.Resources.ItemStackOperation.GetNewRequestID(),
+		)
 	}
 	for key := range request.Requests {
 		requestID := requestIDList[key]
 		request.Requests[key].RequestID = requestID
-		g.PacketHandleResult.ItemStackOperation.WriteRequest(requestID)
+		g.Resources.ItemStackOperation.WriteRequest(
+			requestID,
+			details[key].details,
+		)
 	}
 	// 重新设定每个请求的请求 ID 并写入请求到等待队列
 	err := g.WritePacket(request)
 	if err != nil {
-		return nil, fmt.Errorf("sendItemStackRequestWithResponce: %v", err)
+		return nil, fmt.Errorf("SendItemStackRequestWithResponce: %v", err)
 	}
 	// 发送物品操作请求
 	for _, value := range requestIDList {
-		g.PacketHandleResult.ItemStackOperation.AwaitResponce(value)
-		got, err := g.PacketHandleResult.ItemStackOperation.LoadResponceAndDelete(value)
+		g.Resources.ItemStackOperation.AwaitResponce(value)
+		got, err := g.Resources.ItemStackOperation.LoadResponceAndDelete(value)
 		if err != nil {
-			return nil, fmt.Errorf("sendItemStackRequestWithResponce: %v", err)
+			return nil, fmt.Errorf("SendItemStackRequestWithResponce: %v", err)
 		}
 		ans = append(ans, got)
 	}
 	// 等待租赁服回应所有物品操作请求。同时，每当一个请求被响应，就把对应的结果保存下来
 	return ans, nil
-	// 返回值
-}
-
-// 向租赁服发送 ItemStackReuqest 并无视返回值，这代表着此函数在被执行后不会发生阻塞。
-// 此函数的其中一部分将以协程运行，因此返回值的第二项代表此协程的执行是否存在错误。
-// 除此外，在协程执行完成后，返回值第一项 *sync.Mutex 所指向的互斥锁将被释放，此时
-// 返回值的第二项 *error 将会被赋值。
-// 考虑到物品操作请求在被批准后租赁服不会返回其他数据包用以描述对应槽位的最终结果，
-// 因此在解决此问题前，此函数将暂时作为私有实现
-func (g *GlobalAPI) sendItemStackRequest(request *packet.ItemStackRequest) (*sync.Mutex, *error, error) {
-	requestIDList := []int32{}
-	goRotuineReturnInfo := struct {
-		IsExecuting *sync.Mutex
-		Return      *error
-	}{
-		IsExecuting: &sync.Mutex{},
-		Return:      nil,
-	}
-	// 初始化
-	for range request.Requests {
-		requestIDList = append(requestIDList, g.PacketHandleResult.ItemStackOperation.GetNewRequestID())
-	}
-	for key := range request.Requests {
-		requestID := requestIDList[key]
-		request.Requests[key].RequestID = requestID
-		g.PacketHandleResult.ItemStackOperation.WriteRequest(requestID)
-	}
-	// 重新设定每个请求的请求 ID 并写入请求到等待队列
-	err := g.WritePacket(request)
-	if err != nil {
-		return nil, nil, fmt.Errorf("sendItemStackRequest: %v", err)
-	}
-	// 发送物品操作请求
-	goRotuineReturnInfo.IsExecuting.Lock()
-	go func() {
-		defer func() {
-			goRotuineReturnInfo.IsExecuting.TryLock()
-			goRotuineReturnInfo.IsExecuting.Unlock()
-		}()
-		// while exit
-		for _, value := range requestIDList {
-			g.PacketHandleResult.ItemStackOperation.AwaitResponce(value)
-			_, err := g.PacketHandleResult.ItemStackOperation.LoadResponceAndDelete(value)
-			if err != nil {
-				goRotuineReturnInfo.Return = &err
-				return
-			}
-		}
-		// await changes and return error if their is anything working wrong
-	}()
-	// 等待租赁服回应所有物品操作请求。这里以协程运行的目的在于无视返回值。
-	return goRotuineReturnInfo.IsExecuting, goRotuineReturnInfo.Return, nil
 	// 返回值
 }

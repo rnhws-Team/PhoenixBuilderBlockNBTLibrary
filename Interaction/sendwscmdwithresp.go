@@ -11,13 +11,9 @@ import (
 func (g *GlobalAPI) SendWSCommandWithResponce(command string) (packet.CommandOutput, error) {
 	uniqueId, err := uuid.NewUUID()
 	if err != nil || uniqueId == uuid.Nil {
-		resp, err := g.SendWSCommandWithResponce(command)
-		if err != nil {
-			return packet.CommandOutput{}, fmt.Errorf("SendWSCommandWithResponce: %v", err)
-		}
-		return resp, nil
+		return g.SendWSCommandWithResponce(command)
 	}
-	err = g.PacketHandleResult.commandDatas.writeRequest(uniqueId)
+	err = g.Resources.Command.WriteRequest(uniqueId)
 	if err != nil {
 		return packet.CommandOutput{}, fmt.Errorf("SendWSCommandWithResponce: %v", err)
 	}
@@ -27,9 +23,9 @@ func (g *GlobalAPI) SendWSCommandWithResponce(command string) (packet.CommandOut
 		return packet.CommandOutput{}, fmt.Errorf("SendWSCommandWithResponce: %v", err)
 	}
 	// 发送命令
-	g.PacketHandleResult.commandDatas.awaitResponce(uniqueId)
+	g.Resources.Command.AwaitResponce(uniqueId)
 	// 等待租赁服响应命令请求
-	ans, err := g.PacketHandleResult.commandDatas.loadResponceAndDelete(uniqueId)
+	ans, err := g.Resources.Command.LoadResponceAndDelete(uniqueId)
 	if err != nil {
 		return packet.CommandOutput{}, fmt.Errorf("SendWSCommandWithResponce: %v", err)
 	}

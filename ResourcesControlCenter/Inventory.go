@@ -71,8 +71,8 @@ func (i *inventoryContents) GetItemStackInfo(windowID uint32, slotLocation uint8
 	// return
 }
 
-// 修改 windowID 库存中 slotLocation 槽位的物品数据，属于私有实现
-func (i *inventoryContents) writeItemStackInfo(windowID uint32, slotLocation uint8, itemStackInfo protocol.ItemInstance) {
+// 创建窗口 ID 为 windowID 的库存，如果库存不存在的话
+func (i *inventoryContents) createNewInventory(windowID uint32) {
 	i.lockDown.Lock()
 	defer i.lockDown.Unlock()
 	// init
@@ -82,7 +82,16 @@ func (i *inventoryContents) writeItemStackInfo(windowID uint32, slotLocation uin
 	if i.datas[windowID] == nil {
 		i.datas[windowID] = make(map[uint8]protocol.ItemInstance)
 	}
-	// make
+	// create new inventory
+}
+
+// 修改 windowID 库存中 slotLocation 槽位的物品数据，属于私有实现
+func (i *inventoryContents) writeItemStackInfo(windowID uint32, slotLocation uint8, itemStackInfo protocol.ItemInstance) {
+	i.createNewInventory(windowID)
+	// create new inventory if needed
+	i.lockDown.Lock()
+	defer i.lockDown.Unlock()
+	// lock down resources
 	i.datas[windowID][slotLocation] = itemStackInfo
 	// write datas
 }

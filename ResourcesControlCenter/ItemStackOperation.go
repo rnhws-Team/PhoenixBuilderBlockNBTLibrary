@@ -198,9 +198,15 @@ func (i *itemStackReuqestWithResponce) GetNewItemData(
 	// return
 }
 
-// 根据租赁服返回的 resp 字段更新对应库存中对应槽位的物品数据。
-// inventory 必须是一个指针，它指向了客户端唯一的库存数据。
-// 属于私有实现
+/*
+根据租赁服返回的 resp 字段更新对应库存中对应槽位的物品数据。
+inventory 必须是一个指针，它指向了客户端库存数据在内存中存放的地址。
+此函数属于私有实现。
+
+由于返回的 resp 字段不完整，因此此函数内部使用 i.LoadRequest(resp.RequestID)
+来加载原有的请求数据，并访问其中描述的物品变动的预期结果，
+然后依此字段和 resp 字段更新本地库存数据。
+*/
 func (i *itemStackReuqestWithResponce) updateItemData(
 	resp protocol.ItemStackResponse,
 	inventory *inventoryContents,

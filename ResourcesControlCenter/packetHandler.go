@@ -50,6 +50,7 @@ func (r *Resources) handlePacket(pk *packet.Packet) {
 		}
 		r.Container.writeContainerCloseDatas(nil)
 		r.Container.writeContainerOpenDatas(p)
+		r.Inventory.createNewInventory(uint32(p.WindowID))
 		r.Container.responceContainerOperation()
 		// while open a container
 	case *packet.ContainerClose:

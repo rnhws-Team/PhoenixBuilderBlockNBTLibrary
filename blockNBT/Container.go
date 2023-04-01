@@ -1,4 +1,4 @@
-package blockNBT_Container
+package blockNBT
 
 import (
 	"fmt"
@@ -6,31 +6,42 @@ import (
 	"strings"
 )
 
-/*
-检查一个方块是否是已被支持的有效的容器；这里的“有效”指的是可以被 replaceitem 命令生效的容器
+// Item 结构体用于描述单个的物品
+type Item struct {
+	Name   string // Name(TAG_String) = ""
+	Count  uint8  // Count(TAG_Byte) = 0
+	Damage uint16 // TAG_Short = 0
+	Slot   uint8  // Slot(TAG_Byte) = 0
+}
 
-如果不是已被支持的容器，则返回 var NotASupportedContainer string = "Not a supported container"
-*/
+// Container 结构体用于描述一个容器
+type Container struct {
+	Package *Package // 该方块实体的详细数据
+	Items   []Item   // 容器内的物品数据
+}
+
+// 检查一个方块是否是已被支持的有效的容器；这里的“有效”指的是可以被 replaceitem 命令生效的容器。
+// 如果不是已被支持的容器，则返回 var NotASupportedContainer string = "Not a supported container"
 func (c *Container) checkIfIsSupportedContainer() string {
-	value, ok := SupportContainerPool[c.BlockEntityDatas.Block.Name]
+	value, ok := SupportContainerPool[c.Package.Block.Name]
 	if ok {
 		return value
 	}
 	return NotASupportedContainer
 }
 
-// 从容器的 NBT 数据提取物品数据；结果会被替换在 c.BlockEntityDatas.Block.NBT[KeyName] 中
+// 从容器的 NBT 数据提取物品数据；结果会被替换在 c.Package.Block.NBT[KeyName] 中
 func (c *Container) replaceNBTMapToContainerList() error {
 	key := c.checkIfIsSupportedContainer()
 	if key == NotASupportedContainer {
 		return ErrNotASupportedContainer
 	}
 	// 这里是确定一下这个容器是否是我们支持了的容器
-	value, ok := c.BlockEntityDatas.Block.NBT[key]
+	value, ok := c.Package.Block.NBT[key]
 	if !ok {
-		c.BlockEntityDatas.Block.NBT = map[string]interface{}{KeyName: []interface{}{}}
+		c.Package.Block.NBT = map[string]interface{}{KeyName: []interface{}{}}
 	} else {
-		c.BlockEntityDatas.Block.NBT = map[string]interface{}{KeyName: value}
+		c.Package.Block.NBT = map[string]interface{}{KeyName: value}
 	}
 	// 对于唱片机和讲台这种容器，如果它们没有被放物品的话，那么对应的 key 是找不到的
 	// 但是这并非是错误
@@ -38,7 +49,7 @@ func (c *Container) replaceNBTMapToContainerList() error {
 	// 返回值
 }
 
-// 从 c.BlockEntityDatas.Block.NBT 提取物品数据并保存在 c.Items 中
+// 从 c.Package.Block.NBT 提取物品数据并保存在 c.Items 中
 func (c *Container) Decode() error {
 	var correct []interface{} = []interface{}{}
 	// 初始化
@@ -47,11 +58,11 @@ func (c *Container) Decode() error {
 		return fmt.Errorf("Decode: %v", err)
 	}
 	// 替换 NBT 数据为物品数据
-	got, normal := c.BlockEntityDatas.Block.NBT[KeyName].([]interface{})
+	got, normal := c.Package.Block.NBT[KeyName].([]interface{})
 	if !normal {
-		got, normal := c.BlockEntityDatas.Block.NBT[KeyName].(map[string]interface{})
+		got, normal := c.Package.Block.NBT[KeyName].(map[string]interface{})
 		if !normal {
-			return fmt.Errorf("Decode: Crashed in c.BlockEntityDatas.Block.NBT c.BlockEntityDatas.Block.NBT = %#v", c.BlockEntityDatas.Block.NBT)
+			return fmt.Errorf("Decode: Crashed in c.Package.Block.NBT c.Package.Block.NBT = %#v", c.Package.Block.NBT)
 		}
 		correct = append(correct, got)
 	} else {
@@ -189,4 +200,29 @@ func (c *Container) Decode() error {
 	// get datas
 	return nil
 	// return
+}
+
+// 放置一个容器并填充物品
+func (c *Container) WriteDatas() error {
+	err := c.Package.API.SetBlock(c.Package.Datas.Position, c.Package.Block.Name, c.Package.Datas.StatesString)
+	if err != nil {
+		return fmt.Errorf("WriteDatas: %v", err)
+	}
+	// 放置容器
+	for _, value := range c.Items {
+		err := c.Package.API.ReplaceitemToContainer(
+			c.Package.Datas.Position,
+			value.Slot,
+			value.Name,
+			value.Count,
+			value.Damage,
+			"",
+		)
+		if err != nil {
+			return fmt.Errorf("WriteDatas: %v", err)
+		}
+	}
+	// 向容器内填充物品
+	return nil
+	// 返回值
 }

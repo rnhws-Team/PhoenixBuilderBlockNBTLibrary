@@ -45,7 +45,7 @@ func (g *GlobalAPI) OpenContainer(
 }
 
 // 用于关闭容器时检测到容器从未被打开时的报错信息
-var ContainerNerverOpenedErr error = fmt.Errorf("CloseContainer: Container have been nerver opened")
+var ErrContainerNerverOpened error = fmt.Errorf("CloseContainer: Container have been nerver opened")
 
 /*
 关闭已经打开的容器，且只有当容器被关闭后才会返回值。
@@ -57,7 +57,7 @@ func (g *GlobalAPI) CloseContainer() (bool, error) {
 	g.Resources.Container.AwaitResponceBeforeSendPacket()
 	// await responce before send packet
 	if g.Resources.Container.GetContainerOpenDatas() == nil {
-		return false, ContainerNerverOpenedErr
+		return false, ErrContainerNerverOpened
 	}
 	// if the container have been nerver opened
 	err := g.WritePacket(&packet.ContainerClose{

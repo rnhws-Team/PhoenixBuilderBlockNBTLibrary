@@ -1,18 +1,26 @@
 package GlobalAPI
 
-import "fmt"
+import (
+	"fmt"
+	"phoenixbuilder/fastbuilder/commands_generator"
+	"phoenixbuilder/fastbuilder/types"
+)
 
 // 向容器填充物品
-func (g *GlobalAPI) ReplaceitemToContainer(pos [3]int32, slot uint8, itemName string, count uint8, itemData uint16, method string) error {
-	request := fmt.Sprintf(
-		"replaceitem block %d %d %d slot.container %d %s %d %d %v",
-		pos[0],
-		pos[1],
-		pos[2],
-		slot,
-		itemName,
-		count,
-		itemData,
+func (g *GlobalAPI) ReplaceitemToContainer(
+	pos [3]int32,
+	chestSlot types.ChestSlot,
+	method string,
+) error {
+	request := commands_generator.ReplaceItemRequest(
+		&types.Module{
+			Point: types.Position{
+				X: int(pos[0]),
+				Y: int(pos[1]),
+				Z: int(pos[2]),
+			},
+			ChestSlot: &chestSlot,
+		},
 		method,
 	)
 	err := g.SendSettingsCommand(request, true)

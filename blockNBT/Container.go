@@ -2,6 +2,7 @@ package blockNBT
 
 import (
 	"fmt"
+	"phoenixbuilder/fastbuilder/types"
 	"phoenixbuilder/mirror/chunk"
 	"strings"
 )
@@ -212,10 +213,12 @@ func (c *Container) WriteDatas() error {
 	for _, value := range c.Items {
 		err := c.Package.API.ReplaceitemToContainer(
 			c.Package.Datas.Position,
-			value.Slot,
-			value.Name,
-			value.Count,
-			value.Damage,
+			types.ChestSlot{
+				Name:   value.Name,
+				Count:  value.Count,
+				Damage: value.Damage,
+				Slot:   value.Count,
+			},
 			"",
 		)
 		if err != nil {

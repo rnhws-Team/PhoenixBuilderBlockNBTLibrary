@@ -10,10 +10,11 @@ import (
 占用客户端的容器资源。
 
 当 tryMode 为真时，将尝试占用资源并返回占用结果，此对应返回值 bool 部分。
-若 tryMode 为假，则返回值 bool 部分永远为真。
+若 tryMode 为假，则此项返回真。
 
-无论 tryMode 的真假性如何，当且仅当容器资源被成功占用时，
-返回值的字符串的长度才会大于 0 ，且表达为 uuid 形式，否则为空字符串
+返回的字符串指代资源的占用者，这用于资源释放函数
+func (c *container) Release(holder string) bool
+中的 holder 参数
 */
 func (c *container) Occupy(tryMode bool) (bool, string) {
 	newUUID, err := uuid.NewUUID()

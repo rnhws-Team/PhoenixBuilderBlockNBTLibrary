@@ -72,5 +72,10 @@ func (r *Resources) handlePacket(pk *packet.Packet) {
 		r.Container.writeContainerCloseDatas(p)
 		r.Container.responceContainerOperation()
 		// while a container is closed
+	case *packet.StructureTemplateDataResponse:
+		if r.Structure.GetOccupyStates() {
+			r.Structure.writeStructureResponce(*p)
+		}
+		// packet.StructureTemplateDataRequest
 	}
 }

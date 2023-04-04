@@ -82,15 +82,29 @@ func (r *Resources) Init() func(pk *packet.Packet) {
 			datas:    nil,
 		},
 		awaitChanges: sync.Mutex{},
-		isUsing: struct {
-			lockDown sync.Mutex
-			holder   string
-		}{
-			lockDown: sync.Mutex{},
-			holder:   "",
+		resourcesOccupy: resourcesOccupy{
+			lockDown:   sync.Mutex{},
+			lockStates: 0,
+			holder:     "",
 		},
 	}
 	// Container
+	r.Structure = mcstructure{
+		resourcesOccupy: resourcesOccupy{
+			lockDown:   sync.Mutex{},
+			lockStates: 0,
+			holder:     "",
+		},
+		responce: struct {
+			lockDown sync.RWMutex
+			datas    *packet.StructureTemplateDataResponse
+		}{
+			lockDown: sync.RWMutex{},
+			datas:    nil,
+		},
+		awaitChanges: sync.Mutex{},
+	}
+	// Structure
 	return r.handlePacket
 	// return
 }

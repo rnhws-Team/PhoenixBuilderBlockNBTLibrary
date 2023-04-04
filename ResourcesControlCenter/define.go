@@ -26,6 +26,8 @@ type Resources struct {
 	ItemStackOperation itemStackReuqestWithResponce
 	// 管理容器资源的占用状态，同时存储容器操作的结果
 	Container container
+	// 管理结构资源并保存结构请求的回应
+	Structure mcstructure
 }
 
 // 存放命令请求及结果
@@ -159,12 +161,21 @@ type container struct {
 	}
 	// 其他实现在打开或关闭容器后可能需要等待回应，此互斥锁便是为了完成这一实现
 	awaitChanges sync.Mutex
-	// PhoenixBuilder 同一时刻至多打开一个容器。此互斥锁是为了解决资源纠纷问题而设
-	isUsing struct {
-		// 当容器资源被占用时此互斥锁将会被锁定，否则反之
-		lockDown sync.Mutex
-		// 记录容器资源的占用者，用于确保资源释放者是占用者本身。
-		// 此处应该记录一个 UUID
-		holder string
+	// 描述容器资源的占用状态及占用者
+	resourcesOccupy
+}
+
+// 记录结构资源并保存结构请求的回应
+type mcstructure struct {
+	// 描述结构资源的占用状态及占用者
+	resourcesOccupy
+	// 保存结构请求的返回值
+	responce struct {
+		// 防止并发读写而设置的读写锁
+		lockDown sync.RWMutex
+		// 当客户端请求结构数据后，租赁服会以此数据包回应，届时此变量将被赋值
+		datas *packet.StructureTemplateDataResponse
 	}
+	// 其他实现在请求结构后可能需要等待回应，此互斥锁便是为了完成这一实现
+	awaitChanges sync.Mutex
 }

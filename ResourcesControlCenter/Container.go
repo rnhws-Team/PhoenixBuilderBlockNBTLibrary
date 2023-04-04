@@ -2,59 +2,7 @@ package ResourcesControlCenter
 
 import (
 	"phoenixbuilder/minecraft/protocol/packet"
-
-	"github.com/google/uuid"
 )
-
-/*
-占用客户端的容器资源。
-
-当 tryMode 为真时，将尝试占用资源并返回占用结果，此对应返回值 bool 部分。
-若 tryMode 为假，则此项返回真。
-
-返回的字符串指代资源的占用者，这用于资源释放函数
-func (c *container) Release(holder string) bool
-中的 holder 参数
-*/
-func (c *container) Occupy(tryMode bool) (bool, string) {
-	newUUID, err := uuid.NewUUID()
-	if err != nil || newUUID == uuid.Nil {
-		return c.Occupy(tryMode)
-	}
-	uniqueId := newUUID.String()
-	// spawn a new uuid to set the holder of container resources
-	if tryMode {
-		success := c.isUsing.lockDown.TryLock()
-		if success {
-			c.isUsing.holder = uniqueId
-			// set the holder of container resources
-			return true, uniqueId
-			// return
-		} else {
-			return false, ""
-			// return
-		}
-	}
-	// if is try mode
-	c.isUsing.lockDown.Lock()
-	// lock down resources
-	c.isUsing.holder = uniqueId
-	// set the holder of container resources
-	return true, uniqueId
-	// return
-}
-
-// 释放客户端的容器资源，返回值代表执行结果。
-// holder 指代容器资源的占用者，当且仅当填写的占用者
-// 可以与内部记录的占用者对应时才会成功释放容器资源
-func (c *container) Release(holder string) bool {
-	if c.isUsing.holder == holder && c.isUsing.holder != "" {
-		c.isUsing.holder = ""
-		c.isUsing.lockDown.Unlock()
-		return true
-	}
-	return false
-}
 
 // 用于在 打开/关闭 容器前执行，
 // 便于后续调用 AwaitResponceAfterSendPacket 以阻塞程序的执行从而

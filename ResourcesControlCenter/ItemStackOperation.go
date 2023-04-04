@@ -159,8 +159,17 @@ func (i *itemStackReuqestWithResponce) GetNewRequestID() int32 {
 	return atomic.AddInt32(&i.currentRequestID, -2)
 }
 
-// 根据 newItem 中预期的新数据和租赁服返回的 resp ，
-// 返回完整的新物品数据
+/*
+根据 newItem 中预期的新数据和租赁服返回的 resp ，
+返回完整的新物品数据。
+
+Note: resp 中的 CustomName 似乎永远为空，然而这样的话，
+似乎问题就有点难处理了，因为铁砧改名时如果提供空名称或者
+默认名称，那么都会被视为把物品名称还原到默认名称，这时候
+应该移除 tag/display/Name 这个东西。但问题在于，我们无
+法判断提供的新名称是否是物品默认名…… 不过这个危害应该不
+大，因为仅仅是名称这一方面的同步缺失了，总体上不影响…… ——Happy2018new
+*/
 func (i *itemStackReuqestWithResponce) GetNewItemData(
 	newItem protocol.ItemInstance,
 	resp protocol.StackResponseSlotInfo,

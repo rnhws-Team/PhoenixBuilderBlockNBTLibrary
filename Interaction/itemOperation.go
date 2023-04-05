@@ -204,6 +204,11 @@ func (g *GlobalAPI) ChangeItemName(
 		return false, nil
 	}
 	// 更新物品数据中的名称字段以用于更新本地库存数据
+	_, ok := itemDatas.Stack.NBTData["RepairCost"]
+	if !ok {
+		itemDatas.Stack.NBTData["RepairCost"] = int32(0)
+	}
+	// 更新物品数据中的 RepairCost 字段用于更新本地库存数据
 	err = g.Resources.ItemStackOperation.WriteRequest(
 		newRequestID,
 		map[ResourcesControlCenter.ContainerID]ResourcesControlCenter.StackRequestContainerInfo{

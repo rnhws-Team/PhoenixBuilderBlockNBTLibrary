@@ -106,20 +106,20 @@ func (g *GlobalAPI) GenerateNewAnvil(pos [3]int32, blockStates string) (uuid.UUI
 // 恢复铁砧及对应承重方块处的方块为原本方块，同时删除备份用结构。
 // 其中，uniqueId 参数代表备份用结构的名称在被转换为 uuid.UUID 后的结果。
 // 特别地，anvilPos 参数应当填写铁砧被放置的坐标。
-func (g *GlobalAPI) RevertBlockUnderAnvil(uniqueId uuid.UUID, anvilPos [3]int32) error {
+func (g *GlobalAPI) RevertBlocks(uniqueId uuid.UUID, anvilPos [3]int32) error {
 	correctPos := [3]int32{anvilPos[0], anvilPos[1] - 1, anvilPos[2]}
 	// 初始化
 	resp, err := g.SendWSCommandWithResponce(fmt.Sprintf(`structure load "%v" %d %d %d`, uniqueId.String(), correctPos[0], correctPos[1], correctPos[2]))
 	if err != nil {
-		return fmt.Errorf("RevertBlockUnderAnvil: %v", err)
+		return fmt.Errorf("RevertBlocks: %v", err)
 	}
 	if resp.SuccessCount <= 0 {
-		return fmt.Errorf("RevertBlockUnderAnvil: Failed to revert blocks on %v; resp = %#v", correctPos, resp)
+		return fmt.Errorf("RevertBlocks: Failed to revert blocks on %v; resp = %#v", correctPos, resp)
 	}
 	// 尝试恢复承重方块处原本的方块
 	err = g.SendSettingsCommand(fmt.Sprintf(`structure delete "%v"`, uniqueId.String()), true)
 	if err != nil {
-		return fmt.Errorf("RevertBlockUnderAnvil: %v", err)
+		return fmt.Errorf("RevertBlocks: %v", err)
 	}
 	// 删除用于备份的结构
 	return nil

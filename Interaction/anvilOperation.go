@@ -79,7 +79,7 @@ func (g *GlobalAPI) ChangeItemNameByUsingAnvil(
 			g.SendWSCommandWithResponce(fmt.Sprintf("setblock %d %d %d air", correctPos[0], correctPos[1], correctPos[2]))
 		}
 		// 如果需要移除铁砧
-		g.RevertBlockUnderAnvil(uniqueId, correctPos)
+		g.RevertBlocks(uniqueId, correctPos)
 		// 恢复铁砧下方的承重方块为原本方块
 	}()
 	// 退出时应该被调用的函数

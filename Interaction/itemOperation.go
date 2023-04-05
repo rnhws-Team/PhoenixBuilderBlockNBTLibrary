@@ -194,7 +194,7 @@ func (g *GlobalAPI) ChangeItemName(
 	// 构造一个新的 ItemStackRequest 结构体
 	err = g.Resources.ItemStackOperation.SetItemName(
 		&itemDatas,
-		&name,
+		name,
 	)
 	if err != nil {
 		err = revertFunc()

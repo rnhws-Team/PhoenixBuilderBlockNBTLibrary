@@ -160,10 +160,10 @@ func (i *itemStackReuqestWithResponce) GetNewRequestID() int32 {
 }
 
 // 利用 newItemName 更新 item 中存储的物品名称信息。
-// 如果 newItemName 为 nil ，则将会从 item 中移除物品名称信息
+// 如果传入的 newItemName 为空字符串，则将会从 item 中移除物品名称信息
 func (i *itemStackReuqestWithResponce) SetItemName(
 	item *protocol.ItemInstance,
-	newItemName *string,
+	newItemName string,
 ) error {
 	nbt := item.Stack.NBTData
 	// get nbt datas
@@ -196,7 +196,7 @@ func (i *itemStackReuqestWithResponce) SetItemName(
 		nbt["tag"].(map[string]interface{})["display"] = newMap
 	}
 	// init func
-	if newItemName != nil {
+	if len(newItemName) >= 1 {
 		_, ok := nbt["tag"]
 		if !ok {
 			nbt["tag"] = map[string]interface{}{}
@@ -216,7 +216,7 @@ func (i *itemStackReuqestWithResponce) SetItemName(
 			return fmt.Errorf("SetItemName: Failed to convert tag[\"display\"] into map[string]interface{}; tag = %#v", tag)
 		}
 		// display
-		nbt["tag"].(map[string]interface{})["display"].(map[string]interface{})["Name"] = *newItemName
+		nbt["tag"].(map[string]interface{})["display"].(map[string]interface{})["Name"] = newItemName
 		// name
 		return nil
 		// return

@@ -171,87 +171,55 @@ func (i *itemStackReuqestWithResponce) SetItemName(
 		item.Stack.NBTData = nbt
 	}()
 	// while exit
-	deleteTag := func() {
-		delete(nbt, "tag")
+	deleteDisplay := func() {
+		delete(nbt, "display")
 		newMap := map[string]interface{}{}
 		for key, value := range nbt {
 			newMap[key] = value
 		}
 		nbt = newMap
 	}
-	deleteDisplay := func() {
-		delete(nbt["tag"].(map[string]interface{}), "display")
-		newMap := map[string]interface{}{}
-		for key, value := range nbt["tag"].(map[string]interface{}) {
-			newMap[key] = value
-		}
-		nbt["tag"] = newMap
-	}
 	deleteName := func() {
-		delete(nbt["tag"].(map[string]interface{})["display"].(map[string]interface{}), "Name")
+		delete(nbt["display"].(map[string]interface{}), "Name")
 		newMap := map[string]interface{}{}
-		for key, value := range nbt["tag"].(map[string]interface{})["display"].(map[string]interface{}) {
+		for key, value := range nbt["display"].(map[string]interface{}) {
 			newMap[key] = value
 		}
-		nbt["tag"].(map[string]interface{})["display"] = newMap
+		nbt["display"] = newMap
 	}
 	// init func
-	if len(newItemName) >= 1 {
-		_, ok := nbt["tag"]
+	if newItemName != "" {
+		_, ok := nbt["display"]
 		if !ok {
-			nbt["tag"] = map[string]interface{}{}
+			nbt["display"] = map[string]interface{}{}
 		}
-		tag, normal := nbt["tag"].(map[string]interface{})
+		_, normal := nbt["display"].(map[string]interface{})
 		if !normal {
-			return fmt.Errorf("SetItemName: Failed to convert nbt[\"tag\"] into map[string]interface{}; nbt = %#v", nbt)
-		}
-		// tag
-		_, ok = tag["display"]
-		if !ok {
-			tag["display"] = map[string]interface{}{}
-			nbt["tag"].(map[string]interface{})["display"] = map[string]interface{}{}
-		}
-		_, normal = tag["display"].(map[string]interface{})
-		if !normal {
-			return fmt.Errorf("SetItemName: Failed to convert tag[\"display\"] into map[string]interface{}; tag = %#v", tag)
+			return fmt.Errorf("SetItemName: Failed to convert nbt[\"display\"] into map[string]interface{}; nbt = %#v", nbt)
 		}
 		// display
-		nbt["tag"].(map[string]interface{})["display"].(map[string]interface{})["Name"] = newItemName
+		nbt["display"].(map[string]interface{})["Name"] = newItemName
 		// name
 		return nil
 		// return
 	} else {
-		_, ok := nbt["tag"]
+		_, ok := nbt["display"]
 		if !ok {
 			return nil
 		}
-		tag, normal := nbt["tag"].(map[string]interface{})
+		_, normal := nbt["display"].(map[string]interface{})
 		if !normal {
-			return fmt.Errorf("SetItemName: Failed to convert nbt[\"tag\"] into map[string]interface{}; nbt = %#v", nbt)
-		}
-		// tag
-		_, ok = tag["display"]
-		if !ok {
-			if len(nbt["tag"].(map[string]interface{})) <= 0 {
-				deleteTag()
-			}
-			return nil
-		}
-		_, normal = tag["display"].(map[string]interface{})
-		if !normal {
-			return fmt.Errorf("SetItemName: Failed to convert tag[\"display\"] into map[string]interface{}; tag = %#v", tag)
+			return fmt.Errorf("SetItemName: Failed to convert nbt[\"display\"] into map[string]interface{}; nbt = %#v", nbt)
 		}
 		// display
-		_, ok = tag["display"].(map[string]interface{})["Name"]
+		_, ok = nbt["display"].(map[string]interface{})["Name"]
 		if ok {
 			deleteName()
 		}
-		if len(nbt["tag"].(map[string]interface{})["display"].(map[string]interface{})) <= 0 {
+		if len(nbt["display"].(map[string]interface{})) <= 0 {
 			deleteDisplay()
-			if len(nbt["tag"].(map[string]interface{})) <= 0 {
-				deleteTag()
-			}
 		}
+		// name
 		return nil
 		// return
 	}

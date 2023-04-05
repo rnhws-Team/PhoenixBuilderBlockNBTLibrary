@@ -49,7 +49,7 @@ func (g *GlobalAPI) MoveItem(
 	}
 	itemOnDestination, err := g.Resources.Inventory.GetItemStackInfo(uint32(destination.WindowID), destination.Slot)
 	if err != nil {
-		return []protocol.ItemStackResponse{}, fmt.Errorf("MoveItem: %v", err)
+		itemOnDestination = AirItem
 	}
 	// 取得 source 和 destination 处的物品信息
 	if moveCount <= uint8(itemOnSource.Stack.Count) || source.WindowID == -1 {

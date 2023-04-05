@@ -159,50 +159,57 @@ func (i *itemStackReuqestWithResponce) GetNewRequestID() int32 {
 	return atomic.AddInt32(&i.currentRequestID, -2)
 }
 
-/*
-根据 newItem 中预期的新数据和租赁服返回的 resp ，
-返回完整的新物品数据。
+// 利用 newItemName 更新 item 中存储的物品名称信息。
+// 此实现目前还不够完善，因为传入的 newItamName 为
+// 空字符串或其为物品的默认名称时，理应删除物品名称
+// 信息而非覆写它们。
+func (i *itemStackReuqestWithResponce) SetItemName(
+	item *protocol.ItemInstance,
+	newItemName string,
+) error {
+	nbt := item.Stack.NBTData
+	// get nbt datas
+	_, ok := nbt["tag"]
+	if !ok {
+		nbt["tag"] = map[string]interface{}{}
+	}
+	tag, normal := nbt["tag"].(map[string]interface{})
+	if !normal {
+		return fmt.Errorf("SetItemName: Failed to convert nbt[\"tag\"] into map[string]interface{}; nbt = %#v", nbt)
+	}
+	// tag
+	_, ok = tag["display"]
+	if !ok {
+		tag["display"] = map[string]interface{}{}
+		nbt["tag"].(map[string]interface{})["display"] = map[string]interface{}{}
+	}
+	_, normal = tag["display"].(map[string]interface{})
+	if !normal {
+		return fmt.Errorf("SetItemName: Failed to convert tag[\"display\"] into map[string]interface{}; tag = %#v", tag)
+	}
+	// display
+	nbt["tag"].(map[string]interface{})["display"].(map[string]interface{})["Name"] = newItemName
+	// name
+	item.Stack.NBTData = nbt
+	// set names
+	return nil
+	// return
+}
 
-Note: resp 中的 CustomName 似乎永远为空，然而这样的话，
-似乎问题就有点难处理了，因为铁砧改名时如果提供空名称或者
-默认名称，那么都会被视为把物品名称还原到默认名称，这时候
-应该移除 tag/display/Name 这个东西。但问题在于，我们无
-法判断提供的新名称是否是物品默认名…… 不过这个危害应该不
-大，因为仅仅是名称这一方面的同步缺失了，总体上不影响…… ——Happy2018new
-*/
+// 根据 newItem 中预期的新数据和租赁服返回的 resp ，
+// 返回完整的新物品数据。
 func (i *itemStackReuqestWithResponce) GetNewItemData(
 	newItem protocol.ItemInstance,
 	resp protocol.StackResponseSlotInfo,
 ) (protocol.ItemInstance, error) {
 	nbt := newItem.Stack.NBTData
 	// 获取物品的旧 NBT 数据
-	if resp.CustomName != "" {
-		_, ok := nbt["tag"]
-		if !ok {
-			nbt["tag"] = map[string]interface{}{}
-		}
-		tag, normal := nbt["tag"].(map[string]interface{})
-		if !normal {
-			return protocol.ItemInstance{}, fmt.Errorf("getNewItemData: Failed to convert nbt[\"tag\"] into map[string]interface{}; nbt = %#v", nbt)
-		}
-		// tag
-		_, ok = tag["display"]
-		if !ok {
-			tag["display"] = map[string]interface{}{}
-			nbt["tag"].(map[string]interface{})["display"] = map[string]interface{}{}
-		}
-		_, normal = tag["display"].(map[string]interface{})
-		if !normal {
-			return protocol.ItemInstance{}, fmt.Errorf("getNewItemData: Failed to convert tag[\"display\"] into map[string]interface{}; tag = %#v", tag)
-		}
-		// display
-		nbt["tag"].(map[string]interface{})["display"].(map[string]interface{})["Name"] = resp.CustomName
-		// name
-	}
-	// set names
 	newItem.Stack.NBTData = nbt
 	newItem.Stack.Count = uint16(resp.Count)
 	newItem.StackNetworkID = resp.StackNetworkID
+	/*
+		newItem.Stack.MetadataValue = uint32(resp.DurabilityCorrection) [This line of code has not been tested for validity]
+	*/
 	// update values
 	return newItem, nil
 	// return

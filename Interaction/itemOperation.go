@@ -110,6 +110,47 @@ func (g *GlobalAPI) ChangeItemName(
 		return false, fmt.Errorf("ChangeItemName: %v", err)
 	}
 	// 取得已放入铁砧的物品的物品数据
+	revertFunc := func() error {
+		source := MoveItemDatas{
+			WindowID:    int16(containerOpenDatas.WindowID),
+			ContainerID: 0,
+			Slot:        1,
+		}
+		destination := MoveItemDatas{
+			WindowID:    0,
+			ContainerID: 0xc,
+			Slot:        slot,
+		}
+		ans, err := g.MoveItem(
+			source,
+			destination,
+			ItemChangeDetails{
+				map[ResourcesControlCenter.ContainerID]ResourcesControlCenter.StackRequestContainerInfo{
+					0: {
+						WindowID: uint32(containerOpenDatas.WindowID),
+						ChangeResult: map[uint8]protocol.ItemInstance{
+							1: AirItem,
+						},
+					},
+					0xc: {
+						WindowID: 0,
+						ChangeResult: map[uint8]protocol.ItemInstance{
+							slot: itemDatas,
+						},
+					},
+				},
+			},
+			uint8(itemDatas.Stack.Count),
+		)
+		if err != nil {
+			panic(fmt.Sprintf("ChangeItemName: %v", err))
+		}
+		if ans[0].Status != protocol.ItemStackResponseStatusOK {
+			return fmt.Errorf("ChangeItemName: Could not revert operation because of the new operation which numbered %v have been canceled by error code %v. This maybe is a BUG, please provide this logs to the developers!\nnewAns = %#v; source = %#v; destination = %#v; moveCount = %v", ans[0].RequestID, ans[0].Status, ans, source, destination, itemDatas.Stack.Count)
+		}
+		return nil
+	}
+	// 构造一个用于错误恢复的函数
 	newRequestID := g.Resources.ItemStackOperation.GetNewRequestID()
 	// 请求一个新的 RequestID 用于 ItemStackRequest
 	placeStackRequestAction := protocol.PlaceStackRequestAction{}
@@ -151,6 +192,18 @@ func (g *GlobalAPI) ChangeItemName(
 		},
 	}
 	// 构造一个新的 ItemStackRequest 结构体
+	err = g.Resources.ItemStackOperation.SetItemName(
+		&itemDatas,
+		name,
+	)
+	if err != nil {
+		err = revertFunc()
+		if err != nil {
+			panic(fmt.Sprintf("ChangeItemName: %v", err))
+		}
+		return false, nil
+	}
+	// 更新物品数据中的名称字段以用于更新本地库存数据
 	err = g.Resources.ItemStackOperation.WriteRequest(
 		newRequestID,
 		map[ResourcesControlCenter.ContainerID]ResourcesControlCenter.StackRequestContainerInfo{
@@ -181,68 +234,31 @@ func (g *GlobalAPI) ChangeItemName(
 		},
 	)
 	if err != nil {
-		return false, fmt.Errorf("ChangeItemName: %v", err)
+		err = revertFunc()
+		if err != nil {
+			panic(fmt.Sprintf("ChangeItemName: %v", err))
+		}
 	}
 	// 写入请求到等待队列
 	err = g.WritePacket(&newItemStackRequest)
 	if err != nil {
-		return false, fmt.Errorf("ChangeItemName: %v", err)
+		panic(fmt.Sprintf("ChangeItemName: %v", err))
 	}
 	// 发送物品操作请求
 	g.Resources.ItemStackOperation.AwaitResponce(newRequestID)
+	// 等待租赁服响应物品操作请求
 	ans, err := g.Resources.ItemStackOperation.LoadResponceAndDelete(newRequestID)
-	if err != nil {
-		return false, fmt.Errorf("ChangeItemName: %v", err)
-	}
-	// 取得物品操作请求的结果
-	if ans.Status != protocol.ItemStackResponseStatusOK {
-		source := MoveItemDatas{
-			WindowID:    int16(containerOpenDatas.WindowID),
-			ContainerID: 0,
-			Slot:        1,
-		}
-		destination := MoveItemDatas{
-			WindowID:    0,
-			ContainerID: 0xc,
-			Slot:        slot,
-		}
-		newAns, err := g.MoveItem(
-			source,
-			destination,
-			ItemChangeDetails{
-				map[ResourcesControlCenter.ContainerID]ResourcesControlCenter.StackRequestContainerInfo{
-					0: {
-						WindowID: uint32(containerOpenDatas.WindowID),
-						ChangeResult: map[uint8]protocol.ItemInstance{
-							1: AirItem,
-						},
-					},
-					0xc: {
-						WindowID: 0,
-						ChangeResult: map[uint8]protocol.ItemInstance{
-							slot: itemDatas,
-						},
-					},
-				},
-			},
-			uint8(itemDatas.Stack.Count),
-		)
+	if err != nil || ans.Status != protocol.ItemStackResponseStatusOK {
+		err = revertFunc()
 		if err != nil {
 			panic(fmt.Sprintf("ChangeItemName: %v", err))
 		}
-		if newAns[0].Status != protocol.ItemStackResponseStatusOK {
-			panic(fmt.Sprintf("ChangeItemName: Could not revert operation %v because of the new operation which numbered %v have been canceled by error code %v. This maybe is a BUG, please provide this logs to the developers!\nnewAns = %#v; source = %#v; destination = %#v; moveCount = %v", ans.RequestID, newAns[0].RequestID, newAns[0].Status, newAns, source, destination, itemDatas.Stack.Count))
-		}
 	}
 	// 当改名失败时尝试将物品恢复到背包中对应的位置
-	if ans.Status == 9 {
+	if ans.Status != protocol.ItemStackResponseStatusOK {
 		return false, nil
 	}
-	// 如果名称未发生变化或者因为其他一些原因所导致的改名失败 (ans.Status = 9)
-	if ans.Status != protocol.ItemStackResponseStatusOK {
-		return false, fmt.Errorf("ChangeItemName: Operation %v have been canceled by error code %v; ans = %#v", ans.RequestID, ans.Status, ans)
-	}
-	// 如果物品操作请求被拒绝 (ans.Status = others)
+	// 如果名称未发生变化或者因为其他一些原因所导致的改名失败
 	return true, nil
 	// 返回值
 }

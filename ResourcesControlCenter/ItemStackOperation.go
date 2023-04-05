@@ -160,40 +160,102 @@ func (i *itemStackReuqestWithResponce) GetNewRequestID() int32 {
 }
 
 // 利用 newItemName 更新 item 中存储的物品名称信息。
-// 此实现目前还不够完善，因为传入的 newItamName 为
-// 空字符串或其为物品的默认名称时，理应删除物品名称
-// 信息而非覆写它们。
+// 如果 newItemName 为 nil ，则将会从 item 中移除物品名称信息
 func (i *itemStackReuqestWithResponce) SetItemName(
 	item *protocol.ItemInstance,
-	newItemName string,
+	newItemName *string,
 ) error {
 	nbt := item.Stack.NBTData
 	// get nbt datas
-	_, ok := nbt["tag"]
-	if !ok {
-		nbt["tag"] = map[string]interface{}{}
+	defer func() {
+		item.Stack.NBTData = nbt
+	}()
+	// while exit
+	deleteTag := func() {
+		delete(nbt, "tag")
+		newMap := map[string]interface{}{}
+		for key, value := range nbt {
+			newMap[key] = value
+		}
+		nbt = newMap
 	}
-	tag, normal := nbt["tag"].(map[string]interface{})
-	if !normal {
-		return fmt.Errorf("SetItemName: Failed to convert nbt[\"tag\"] into map[string]interface{}; nbt = %#v", nbt)
+	deleteDisplay := func() {
+		delete(nbt["tag"].(map[string]interface{}), "display")
+		newMap := map[string]interface{}{}
+		for key, value := range nbt["tag"].(map[string]interface{}) {
+			newMap[key] = value
+		}
+		nbt["tag"] = newMap
 	}
-	// tag
-	_, ok = tag["display"]
-	if !ok {
-		tag["display"] = map[string]interface{}{}
-		nbt["tag"].(map[string]interface{})["display"] = map[string]interface{}{}
+	deleteName := func() {
+		delete(nbt["tag"].(map[string]interface{})["display"].(map[string]interface{}), "Name")
+		newMap := map[string]interface{}{}
+		for key, value := range nbt["tag"].(map[string]interface{})["display"].(map[string]interface{}) {
+			newMap[key] = value
+		}
+		nbt["tag"].(map[string]interface{})["display"] = newMap
 	}
-	_, normal = tag["display"].(map[string]interface{})
-	if !normal {
-		return fmt.Errorf("SetItemName: Failed to convert tag[\"display\"] into map[string]interface{}; tag = %#v", tag)
+	// init func
+	if newItemName != nil {
+		_, ok := nbt["tag"]
+		if !ok {
+			nbt["tag"] = map[string]interface{}{}
+		}
+		tag, normal := nbt["tag"].(map[string]interface{})
+		if !normal {
+			return fmt.Errorf("SetItemName: Failed to convert nbt[\"tag\"] into map[string]interface{}; nbt = %#v", nbt)
+		}
+		// tag
+		_, ok = tag["display"]
+		if !ok {
+			tag["display"] = map[string]interface{}{}
+			nbt["tag"].(map[string]interface{})["display"] = map[string]interface{}{}
+		}
+		_, normal = tag["display"].(map[string]interface{})
+		if !normal {
+			return fmt.Errorf("SetItemName: Failed to convert tag[\"display\"] into map[string]interface{}; tag = %#v", tag)
+		}
+		// display
+		nbt["tag"].(map[string]interface{})["display"].(map[string]interface{})["Name"] = *newItemName
+		// name
+		return nil
+		// return
+	} else {
+		_, ok := nbt["tag"]
+		if !ok {
+			return nil
+		}
+		tag, normal := nbt["tag"].(map[string]interface{})
+		if !normal {
+			return fmt.Errorf("SetItemName: Failed to convert nbt[\"tag\"] into map[string]interface{}; nbt = %#v", nbt)
+		}
+		// tag
+		_, ok = tag["display"]
+		if !ok {
+			if len(nbt["tag"].(map[string]interface{})) <= 0 {
+				deleteTag()
+			}
+			return nil
+		}
+		_, normal = tag["display"].(map[string]interface{})
+		if !normal {
+			return fmt.Errorf("SetItemName: Failed to convert tag[\"display\"] into map[string]interface{}; tag = %#v", tag)
+		}
+		// display
+		_, ok = tag["display"].(map[string]interface{})["Name"]
+		if ok {
+			deleteName()
+		}
+		if len(nbt["tag"].(map[string]interface{})["display"].(map[string]interface{})) <= 0 {
+			deleteDisplay()
+			if len(nbt["tag"].(map[string]interface{})) <= 0 {
+				deleteTag()
+			}
+		}
+		return nil
+		// return
 	}
-	// display
-	nbt["tag"].(map[string]interface{})["display"].(map[string]interface{})["Name"] = newItemName
-	// name
-	item.Stack.NBTData = nbt
-	// set names
-	return nil
-	// return
+	// update names
 }
 
 // 根据 newItem 中预期的新数据和租赁服返回的 resp ，

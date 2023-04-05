@@ -60,13 +60,8 @@ func (r *Resources) handlePacket(pk *packet.Packet) {
 				panic(fmt.Sprintf("handlePacket: Try to removed an inventory which not existed; p.WindowID = %v", p.WindowID))
 			}
 		}
-		if !p.ServerSide {
-			unsuccess, _ := r.Container.Occupy(true)
-			if unsuccess {
-				panic("handlePacket: Attempt to send packet.ContainerClose without using ResourcesControlCenter")
-			}
-		} else {
-			r.Container.responceContainerOperation()
+		if !p.ServerSide && !r.Container.GetOccupyStates() {
+			panic("handlePacket: Attempt to send packet.ContainerClose without using ResourcesControlCenter")
 		}
 		r.Container.writeContainerOpenDatas(nil)
 		r.Container.writeContainerCloseDatas(p)

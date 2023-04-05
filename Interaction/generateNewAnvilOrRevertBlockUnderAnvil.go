@@ -22,12 +22,18 @@ const (
 
 const BlockUnderAnvil string = "glass" // 用作铁砧的承重方块
 
-// 在 pos 处尝试放置一个方块状态为 blockStates 的铁砧并附带承重方块。
-// 由于承重方块会替换 pos 下方一格原本的方块，所以会使用 structure 命令备份一次。结构的名称将对应
-// 返回值 uuid.UUID 参数的字符串形式。
-// 考虑到给定的 pos 可能已经超出了客户端所在维度的高度限制，因此此函数将会进行自适应处理，并在
-// 返回值 [3]int32 部分告知铁砧生成的最终坐标。
-// 其他：我们推荐您使用 GlobalAPI.RevertBlockUnderAnvil 函数来恢复承重方块所处位置的原本方块
+/*
+在 pos 处尝试放置一个方块状态为 blockStates 的铁砧并附带承重方块。
+考虑到给定的 pos 可能已经超出了客户端所在维度的高度限制，因此此函数将会进行自适应处理，
+并在返回值 [3]int32 部分告知铁砧生成的最终坐标。
+
+由于承重方块会替换 pos 下方一格原本的方块，所以会使用 structure 命令备份一次。
+结构的名称将对应返回值 uuid.UUID 参数的字符串形式。
+被备份结构包含 2 个方块，分别对应铁砧和承重方块原本的方块。
+
+其他：
+我们推荐您使用 GlobalAPI.RevertBlockUnderAnvil 函数来恢复承重方块所处位置的原本方块
+*/
 func (g *GlobalAPI) GenerateNewAnvil(pos [3]int32, blockStates string) (uuid.UUID, [3]int32, error) {
 	resp, err := g.SendWSCommandWithResponce("querytarget @s")
 	if err != nil {
@@ -73,14 +79,14 @@ func (g *GlobalAPI) GenerateNewAnvil(pos [3]int32, blockStates string) (uuid.UUI
 	if err != nil {
 		return uuid.UUID{}, [3]int32{}, fmt.Errorf("GenerateNewAnvil: %v", err)
 	}
-	resp, err = g.SendWSCommandWithResponce(fmt.Sprintf(`structure save "%v" %d %d %d %d %d %d`, uniqueId.String(), pos[0], pos[1]-1, pos[2], pos[0], pos[1]-1, pos[2]))
+	resp, err = g.SendWSCommandWithResponce(fmt.Sprintf(`structure save "%v" %d %d %d %d %d %d`, uniqueId.String(), pos[0], pos[1]-1, pos[2], pos[0], pos[1], pos[2]))
 	if err != nil {
 		return uuid.UUID{}, [3]int32{}, fmt.Errorf("GenerateNewAnvil: %v", err)
 	}
 	if resp.SuccessCount <= 0 {
 		return uuid.UUID{}, [3]int32{}, fmt.Errorf("GenerateNewAnvil: Failed to save blocks under %v; resp = %#v", pos, resp)
 	}
-	// 铁砧在没有承重方块的情况下会下落，因此我们需要将 pos 下方的一格方块用 structure 命令备份并设为一个承重方块
+	// 备份相关的方块
 	err = g.SendSettingsCommand(fmt.Sprintf("setblock %d %d %d %v", pos[0], pos[1]-1, pos[2], BlockUnderAnvil), true)
 	if err != nil {
 		return uuid.UUID{}, [3]int32{}, fmt.Errorf("GenerateNewAnvil: %v", err)
@@ -97,7 +103,7 @@ func (g *GlobalAPI) GenerateNewAnvil(pos [3]int32, blockStates string) (uuid.UUI
 	// 返回值
 }
 
-// 恢复铁砧的承重方块处的方块为原本方块，同时删除备份用结构。
+// 恢复铁砧及对应承重方块处的方块为原本方块，同时删除备份用结构。
 // 其中，uniqueId 参数代表备份用结构的名称在被转换为 uuid.UUID 后的结果。
 // 特别地，anvilPos 参数应当填写铁砧被放置的坐标。
 func (g *GlobalAPI) RevertBlockUnderAnvil(uniqueId uuid.UUID, anvilPos [3]int32) error {

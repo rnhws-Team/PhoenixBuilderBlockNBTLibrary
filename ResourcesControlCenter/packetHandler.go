@@ -34,7 +34,9 @@ func (r *Resources) handlePacket(pk *packet.Packet) {
 		// inventory contents(for enchant command...)
 	case *packet.ItemStackResponse:
 		for _, value := range p.Responses {
-			r.ItemStackOperation.updateItemData(value, &r.Inventory)
+			if value.Status == protocol.ItemStackResponseStatusOK {
+				r.ItemStackOperation.updateItemData(value, &r.Inventory)
+			}
 			// update local inventory datas
 			err := r.ItemStackOperation.writeResponce(value.RequestID, value)
 			if err != nil {

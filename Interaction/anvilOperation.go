@@ -13,6 +13,23 @@ type AnvilChangeItemName struct {
 	Name string // 要修改的目标名称
 }
 
+// 描述物品名称修改请求的结果
+type ACIN_Responce struct {
+	// 指代物品名称的修改结果。
+	// 为真时代表成功，否则失败
+	SuccessStates bool
+	// 指代物品名称修改失败时选用的处理办法。
+	//
+	// 为真时代表使用“丢出法”，
+	// 即直接将失败的物品从铁砧丢出；
+	// 为假时将使用正常处理方法，
+	// 也就是将物品还原到背包中的原始位置。
+	//
+	// 如果物品名称被成功修改，则此参数将始
+	// 终为 nil
+	RevertMethod *bool
+}
+
 /*
 在 pos 处放置一个方块状态为 blockStates 的铁砧，
 并依次发送 request 列表中的物品名称修改请求。
@@ -28,22 +45,22 @@ func (g *GlobalAPI) ChangeItemNameByUsingAnvil(
 	pos [3]int32,
 	blockStates string,
 	request []AnvilChangeItemName,
-) ([]bool, error) {
-	ans := []bool{}
+) ([]ACIN_Responce, error) {
+	ans := []ACIN_Responce{}
 	// 初始化
 	err := g.SendSettingsCommand("gamemode 1", true)
 	if err != nil {
-		return []bool{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
+		return []ACIN_Responce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 	}
 	// 更换游戏模式为创造
 	uniqueId, correctPos, err := g.GenerateNewAnvil(pos, blockStates)
 	if err != nil {
-		return []bool{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
+		return []ACIN_Responce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 	}
 	// 尝试生成一个铁砧并附带承重方块
 	_, err = g.SendWSCommandWithResponce(fmt.Sprintf("tp %d %d %d", correctPos[0], correctPos[1], correctPos[2]))
 	if err != nil {
-		return []bool{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
+		return []ACIN_Responce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 	}
 	// 传送机器人到铁砧处
 	_, holder := g.Resources.Container.Occupy(false)
@@ -51,24 +68,24 @@ func (g *GlobalAPI) ChangeItemNameByUsingAnvil(
 	// 获取容器资源
 	got, err := mcstructure.ParseStringNBT(blockStates, true)
 	if err != nil {
-		return []bool{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
+		return []ACIN_Responce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 	}
 	blockStatesMap, normal := got.(map[string]interface{})
 	if !normal {
-		return []bool{}, fmt.Errorf("ChangeItemNameByUsingAnvil: Could not convert got into map[string]interface{}; got = %#v", got)
+		return []ACIN_Responce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: Could not convert got into map[string]interface{}; got = %#v", got)
 	}
 	// 获取要求放置的铁砧的方块状态
 	err = g.ChangeSelectedHotbarSlot(0, true)
 	if err != nil {
-		return []bool{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
+		return []ACIN_Responce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 	}
 	// 切换手持物品栏
 	sucessStates, err := g.OpenContainer(correctPos, "minecraft:anvil", blockStatesMap, 0, false)
 	if err != nil {
-		return []bool{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
+		return []ACIN_Responce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 	}
 	if !sucessStates {
-		return []bool{}, fmt.Errorf("ChangeItemNameByUsingAnvil: Failed to open the anvil block on %v", correctPos)
+		return []ACIN_Responce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: Failed to open the anvil block on %v", correctPos)
 	}
 	// 打开铁砧
 	defer func() {
@@ -80,12 +97,8 @@ func (g *GlobalAPI) ChangeItemNameByUsingAnvil(
 	// 退出时应该被调用的函数
 	for _, value := range request {
 		datas, err := g.Resources.Inventory.GetItemStackInfo(0, value.Slot)
-		if err != nil {
-			ans = append(ans, false)
-			continue
-		}
-		if datas.Stack.ItemType.NetworkID == 0 {
-			ans = append(ans, false)
+		if err != nil || datas.Stack.ItemType.NetworkID == 0 {
+			ans = append(ans, ACIN_Responce{SuccessStates: false, RevertMethod: nil})
 			continue
 		}
 		// 获取被改物品的相关信息
@@ -126,15 +139,15 @@ func (g *GlobalAPI) ChangeItemNameByUsingAnvil(
 			return ans, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 		}
 		if resp[0].Status != protocol.ItemStackResponseStatusOK {
-			ans = append(ans, false)
+			ans = append(ans, ACIN_Responce{SuccessStates: false, RevertMethod: nil})
 			continue
 		}
 		// 移动物品到铁砧
-		successStates, err := g.ChangeItemName(value.Name, value.Slot)
+		successStates, revertMethod, err := g.ChangeItemName(value.Name, value.Slot)
 		if err != nil {
 			return ans, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 		}
-		ans = append(ans, successStates)
+		ans = append(ans, ACIN_Responce{SuccessStates: successStates, RevertMethod: revertMethod})
 		// 发送改名请求
 	}
 	// 修改物品名称

@@ -89,14 +89,21 @@ func (g *GlobalAPI) MoveItem(
 
 // 将已放入铁砧第一格(注意是第一格)的物品的物品名称修改为 name 并返还到背包中的 slot 处。
 // 当且仅当租赁服回应操作结果后此函数再返回值。
+//
+// 当遭遇改名失败时，将尝试撤销名称修改请求。
+// 如果原有物品栏已被占用，则对应的物品将被直接丢出，
+// 此对应返回的第二个布尔值，当为真时代表物品已被丢出，
+// 否则物品将会被还原到背包的原始位置。
+// 改名成功时此参数将始终返回 nil
+//
 // 部分情况下此函数可能会遇见无法处理的错误，届时程序将抛出严重错误(panic)
 func (g *GlobalAPI) ChangeItemName(
 	name string,
 	slot uint8,
-) (bool, error) {
+) (bool, *bool, error) {
 	containerOpenDatas := g.Resources.Container.GetContainerOpenDatas()
 	if containerOpenDatas == nil {
-		return false, fmt.Errorf("ChangeItemName: Anvil has not opened")
+		return false, nil, fmt.Errorf("ChangeItemName: Anvil has not opened")
 	}
 	// 如果铁砧未被打开
 	itemDatas, err := g.Resources.Inventory.GetItemStackInfo(
@@ -104,10 +111,41 @@ func (g *GlobalAPI) ChangeItemName(
 		1,
 	)
 	if err != nil {
-		return false, fmt.Errorf("ChangeItemName: %v", err)
+		return false, nil, fmt.Errorf("ChangeItemName: %v", err)
 	}
 	// 取得已放入铁砧的物品的物品数据
-	revertFunc := func() error {
+	revertFunc := func() (bool, *bool, error) {
+		filterAns, err := g.Resources.Inventory.ListSlot(0, &[]int32{0})
+		if err != nil {
+			panic(fmt.Sprintf("ChangeItemName: %v", err)) // 这个错误理论上是不可能发生的
+		}
+		// 筛选出背包中还未被占用实际物品的物品栏
+		successStates := false
+		for _, value := range filterAns {
+			if value == slot {
+				successStates = true
+			}
+		}
+		// 我们需要确定槽位 slot 是否已经被占用了。
+		// successStates 显示了占用结果。
+		// 当被占用时，改名失败的物品会被直接丢出。
+		if len(filterAns) <= 0 || !successStates {
+			if err != nil {
+				panic(fmt.Sprintf("ChangeItemName: %v", err)) // 发生这个错误只有一种可能，那就是铁砧被拆了什么的，但这是用户导致的
+			}
+			_, err = g.DropItemAll(protocol.StackRequestSlotInfo{
+				ContainerID:    0,
+				Slot:           1,
+				StackNetworkID: itemDatas.StackNetworkID,
+			}, uint32(containerOpenDatas.WindowID))
+			if err != nil {
+				panic(fmt.Sprintf("ChangeItemName: %v", err)) // 发生了一些未知错误
+			}
+			revertMethod := true
+			return true, &revertMethod, nil
+		}
+		// 如果背包中没有空出的物品栏，或者槽位 slot 占用了，
+		// 则将未能成功改名的物品直接丢出来
 		source := MoveItemDatas{
 			WindowID:    int16(containerOpenDatas.WindowID),
 			ContainerID: 0,
@@ -143,11 +181,32 @@ func (g *GlobalAPI) ChangeItemName(
 			panic(fmt.Sprintf("ChangeItemName: %v", err))
 		}
 		if ans[0].Status != protocol.ItemStackResponseStatusOK {
-			return fmt.Errorf("ChangeItemName: Could not revert operation because of the new operation which numbered %v have been canceled by error code %v. This maybe is a BUG, please provide this logs to the developers!\nnewAns = %#v; source = %#v; destination = %#v; moveCount = %v", ans[0].RequestID, ans[0].Status, ans, source, destination, itemDatas.Stack.Count)
+			return false, nil, nil
 		}
-		return nil
+		// 看起来一切都很顺利，
+		// 我们成功将未能成功改名的物品送回了 slot 槽位
+		revertMethod := false
+		return true, &revertMethod, nil
+		// return
 	}
-	// 构造一个用于错误恢复的函数
+	// 构造一个函数用于处理改名失败时的善后处理
+	// 返回的第一个布尔值代表善后处理的结果，如果为假，
+	// 那么我们将持续善后处理，直到成功或者程序惊慌。
+	// 返回的第二个布尔值代表善后处理的方式，
+	// 为真时代表使用丢出法处理物品，否则采用正常方法处理物品
+	revertFuncRuner := func() (bool, *bool, error) {
+		for {
+			successStates, revertMethod, err := revertFunc()
+			if err != nil {
+				panic(fmt.Sprintf("ChangeItemName: %v", err))
+			}
+			if !successStates {
+				continue
+			}
+			return false, revertMethod, nil
+		}
+	}
+	// 构造善后处理函数的包装函数
 	newRequestID := g.Resources.ItemStackOperation.GetNewRequestID()
 	// 请求一个新的 RequestID 用于 ItemStackRequest
 	placeStackRequestAction := protocol.PlaceStackRequestAction{}
@@ -194,11 +253,7 @@ func (g *GlobalAPI) ChangeItemName(
 		name,
 	)
 	if err != nil {
-		err = revertFunc()
-		if err != nil {
-			panic(fmt.Sprintf("ChangeItemName: %v", err))
-		}
-		return false, nil
+		return revertFuncRuner()
 	}
 	// 更新物品数据中的名称字段以用于更新本地库存数据
 	_, ok := itemDatas.Stack.NBTData["RepairCost"]
@@ -236,10 +291,7 @@ func (g *GlobalAPI) ChangeItemName(
 		},
 	)
 	if err != nil {
-		err = revertFunc()
-		if err != nil {
-			panic(fmt.Sprintf("ChangeItemName: %v", err))
-		}
+		return revertFuncRuner()
 	}
 	// 写入请求到等待队列
 	err = g.WritePacket(&newItemStackRequest)
@@ -251,17 +303,10 @@ func (g *GlobalAPI) ChangeItemName(
 	// 等待租赁服响应物品操作请求
 	ans, err := g.Resources.ItemStackOperation.LoadResponceAndDelete(newRequestID)
 	if err != nil || ans.Status != protocol.ItemStackResponseStatusOK {
-		err = revertFunc()
-		if err != nil {
-			panic(fmt.Sprintf("ChangeItemName: %v", err))
-		}
+		return revertFuncRuner()
 	}
 	// 当改名失败时尝试将物品恢复到背包中对应的位置
-	if ans.Status != protocol.ItemStackResponseStatusOK {
-		return false, nil
-	}
-	// 如果名称未发生变化或者因为其他一些原因所导致的改名失败
-	return true, nil
+	return true, nil, nil
 	// 返回值
 }
 

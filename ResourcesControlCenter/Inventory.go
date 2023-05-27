@@ -3,6 +3,7 @@ package ResourcesControlCenter
 import (
 	"fmt"
 	"phoenixbuilder/minecraft/protocol"
+	"sort"
 )
 
 // 列出所有可访问库存的窗口 ID ，即 WindowID
@@ -47,13 +48,19 @@ func (i *inventoryContents) ListSlot(
 		return []uint8{}, fmt.Errorf("ListSlot: %v is not recorded in i.datas; i.datas = %#v", windowID, i.datas)
 	}
 	// if windowsID is not exist
-	ans := []uint8{}
+	tmp := []int{}
 	for key, value := range got {
 		if filter == nil || newFilter[value.Stack.ItemType.NetworkID] != nil {
-			ans = append(ans, key)
+			tmp = append(tmp, int(key))
 		}
 	}
 	// get slots list
+	sort.Stable(sort.IntSlice(tmp))
+	// sort
+	ans := []byte{}
+	for _, value := range tmp {
+		ans = append(ans, byte(value))
+	}
 	return ans, nil
 	// return
 }

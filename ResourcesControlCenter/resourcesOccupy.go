@@ -67,7 +67,7 @@ func (r *resourcesOccupy) Release(holder string) bool {
 	return false
 }
 
-// 返回资源的占用状态，为真时代表已被占用，否则反正
+// 返回资源的占用状态，为真时代表已被占用，否则反之
 func (r *resourcesOccupy) GetOccupyStates() bool {
 	if atomic.LoadUint32(&r.lockStates) == 0 {
 		return false

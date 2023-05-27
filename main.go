@@ -1,17 +1,22 @@
 package main
 
-import "fmt"
-
-type ABC struct {
-	num int32
-}
-
-func change(s ABC) {
-	s.num = 524
-}
+import (
+	"encoding/gob"
+	"fmt"
+	"phoenixbuilder/ResourcesControlCenter"
+)
 
 func main() {
-	new := ABC{}
-	change(new)
-	fmt.Println(new)
+	a := map[string]any{"2": map[int]any{2: 3}}
+	var b map[string]any
+	gob.Register(map[string]interface{}{})
+	ResourcesControlCenter.DeepCopy(
+		&a,
+		&b,
+		func() {
+			gob.Register(map[string]any{})
+			gob.Register(map[int]any{})
+		},
+	)
+	fmt.Printf("%#v\n", b)
 }

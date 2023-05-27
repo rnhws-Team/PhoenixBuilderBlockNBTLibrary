@@ -1,6 +1,7 @@
 package GlobalAPI
 
 import (
+	"encoding/gob"
 	"fmt"
 	"phoenixbuilder/ResourcesControlCenter"
 	"phoenixbuilder/minecraft/protocol"
@@ -125,10 +126,22 @@ func (g *GlobalAPI) ChangeItemName(
 	if err != nil {
 		return nil, fmt.Errorf("ChangeItemName: %v", err)
 	}
-	ResourcesControlCenter.DeepCopy(&get, &itemDatas)
+	ResourcesControlCenter.DeepCopy(
+		&get,
+		&itemDatas,
+		func() {
+			gob.Register(map[string]interface{}{})
+		},
+	)
 	// 取得已放入铁砧的物品的物品数据
 	var backup protocol.ItemInstance
-	ResourcesControlCenter.DeepCopy(&get, &backup)
+	ResourcesControlCenter.DeepCopy(
+		&get,
+		&backup,
+		func() {
+			gob.Register(map[string]interface{}{})
+		},
+	)
 	// 备份物品数据
 	filterAns, err := g.Resources.Inventory.ListSlot(0, &[]int32{0})
 	if err != nil {

@@ -6,12 +6,16 @@ import (
 	"phoenixbuilder/minecraft/protocol/packet"
 )
 
-// 切换客户端的手持物品栏为 hotBarSlotID ；
+// 切换客户端的手持物品栏为 hotBarSlotID 。
+// 若提供的 hotBarSlotID 大于 8 ，则会重定向为 0 。
 // 如果 needWaiting 为真，则会等待物品栏切换完成后再返回值
 func (g *GlobalAPI) ChangeSelectedHotbarSlot(hotBarSlotID uint8, needWaiting bool) error {
 	var got protocol.ItemInstance = protocol.ItemInstance{}
+	if hotBarSlotID > 8 {
+		hotBarSlotID = 0
+	}
 	// init var
-	datas, err := g.Resources.Inventory.GetItemStackInfo(0, 0)
+	datas, err := g.Resources.Inventory.GetItemStackInfo(0, hotBarSlotID)
 	// get item contents of window 0(inventory)
 	if err != nil {
 		got = AirItem

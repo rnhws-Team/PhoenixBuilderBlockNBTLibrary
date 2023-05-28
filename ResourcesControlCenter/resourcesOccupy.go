@@ -20,7 +20,7 @@ type resourcesOccupy struct {
 返回的字符串指代资源的占用者，为 UUID 的字符串形式，这用于资源释放函数
 func (r *resourcesOccupy) Release(holder string) bool 中的 holder 参数
 */
-func (r *resourcesOccupy) Occupy() (bool, string) {
+func (r *resourcesOccupy) Occupy() string {
 	newUUID, err := uuid.NewUUID()
 	if err != nil {
 		return r.Occupy()
@@ -31,7 +31,7 @@ func (r *resourcesOccupy) Occupy() (bool, string) {
 	// lock down resources
 	r.holder = uniqueId
 	// set the holder of this resources
-	return true, uniqueId
+	return uniqueId
 	// return
 }
 
@@ -57,5 +57,5 @@ func (r *resourcesOccupy) GetOccupyStates() bool {
 	if notOccupied {
 		r.lockDown.Unlock()
 	}
-	return notOccupied
+	return !notOccupied
 }

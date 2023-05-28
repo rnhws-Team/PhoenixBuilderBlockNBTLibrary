@@ -15,7 +15,10 @@ type AnvilChangeItemName struct {
 
 /*
 在 pos 处放置一个方块状态为 blockStates 的铁砧，
-并依次发送 request 列表中的物品名称修改请求。
+并使用快捷栏 hotBarSlotID 打开铁砧，
+然后依次执行 request 列表中的物品名称修改请求。
+
+若提供的 hotBarSlotID 大于 8 ，则会重定向为 0 。
 
 返回值 []AnvilOperationResponce 代表 request 中每个请求的操作结果，
 它们一一对应，且为真时代表成功改名。
@@ -29,6 +32,7 @@ type AnvilChangeItemName struct {
 func (g *GlobalAPI) ChangeItemNameByUsingAnvil(
 	pos [3]int32,
 	blockStates string,
+	hotBarSlotID uint8,
 	request []AnvilChangeItemName,
 ) ([]AnvilOperationResponce, error) {
 	ans := []AnvilOperationResponce{}
@@ -48,7 +52,7 @@ func (g *GlobalAPI) ChangeItemNameByUsingAnvil(
 		return []AnvilOperationResponce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 	}
 	// 传送机器人到铁砧处
-	_, holder := g.Resources.Container.Occupy()
+	holder := g.Resources.Container.Occupy()
 	defer g.Resources.Container.Release(holder)
 	// 获取容器资源
 	got, err := mcstructure.ParseStringNBT(blockStates, true)
@@ -60,12 +64,12 @@ func (g *GlobalAPI) ChangeItemNameByUsingAnvil(
 		return []AnvilOperationResponce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: Could not convert got into map[string]interface{}; got = %#v", got)
 	}
 	// 获取要求放置的铁砧的方块状态
-	err = g.ChangeSelectedHotbarSlot(0, true)
+	err = g.ChangeSelectedHotbarSlot(hotBarSlotID, true)
 	if err != nil {
 		return []AnvilOperationResponce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 	}
 	// 切换手持物品栏
-	sucessStates, err := g.OpenContainer(correctPos, "minecraft:anvil", blockStatesMap, 0, false)
+	sucessStates, err := g.OpenContainer(correctPos, "minecraft:anvil", blockStatesMap, hotBarSlotID)
 	if err != nil {
 		return []AnvilOperationResponce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 	}

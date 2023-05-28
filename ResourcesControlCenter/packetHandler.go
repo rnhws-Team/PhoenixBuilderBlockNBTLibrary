@@ -46,8 +46,7 @@ func (r *Resources) handlePacket(pk *packet.Packet) {
 		}
 		// item stack request
 	case *packet.ContainerOpen:
-		unsuccess, _ := r.Container.Occupy(true)
-		if unsuccess {
+		if !r.Container.GetOccupyStates() {
 			panic("handlePacket: Attempt to send packet.ContainerOpen without using ResourcesControlCenter")
 		}
 		r.Container.writeContainerCloseDatas(nil)

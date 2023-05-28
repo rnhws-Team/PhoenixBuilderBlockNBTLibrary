@@ -14,21 +14,7 @@ func (g *GlobalAPI) ChangeSelectedHotbarSlot(hotBarSlotID uint8, needWaiting boo
 	datas, err := g.Resources.Inventory.GetItemStackInfo(0, 0)
 	// get item contents of window 0(inventory)
 	if err != nil {
-		got = protocol.ItemInstance{
-			StackNetworkID: 0,
-			Stack: protocol.ItemStack{
-				ItemType: protocol.ItemType{
-					NetworkID:     0,
-					MetadataValue: 0,
-				},
-				BlockRuntimeID: 0,
-				Count:          0,
-				NBTData:        map[string]interface{}{},
-				CanBePlacedOn:  []string(nil),
-				CanBreak:       []string(nil),
-				HasNetworkID:   false,
-			},
-		}
+		got = AirItem
 	} else {
 		got = datas
 	}

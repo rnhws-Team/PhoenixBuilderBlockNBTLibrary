@@ -24,7 +24,7 @@ type resourcesOccupy struct {
 若 tryMode 为假，则此项返回真。
 
 返回的字符串指代资源的占用者，这用于资源释放函数
-func (c *container) Release(holder string) bool
+func (r *resourcesOccupy) Release(holder string) bool
 中的 holder 参数
 */
 func (r *resourcesOccupy) Occupy(tryMode bool) (bool, string) {

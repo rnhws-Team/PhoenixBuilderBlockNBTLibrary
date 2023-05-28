@@ -23,7 +23,7 @@ func (g *GlobalAPI) OpenContainer(
 	needOccupyContainerResources bool,
 ) (bool, error) {
 	if needOccupyContainerResources {
-		_, holder := g.Resources.Container.Occupy(false)
+		_, holder := g.Resources.Container.Occupy()
 		defer g.Resources.Container.Release(holder)
 	}
 	// lock down resources

@@ -48,7 +48,7 @@ func (g *GlobalAPI) ChangeItemNameByUsingAnvil(
 		return []AnvilOperationResponce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 	}
 	// 传送机器人到铁砧处
-	_, holder := g.Resources.Container.Occupy(false)
+	_, holder := g.Resources.Container.Occupy()
 	defer g.Resources.Container.Release(holder)
 	// 获取容器资源
 	got, err := mcstructure.ParseStringNBT(blockStates, true)

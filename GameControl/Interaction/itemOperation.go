@@ -3,7 +3,7 @@ package GlobalAPI
 import (
 	"encoding/gob"
 	"fmt"
-	"phoenixbuilder/ResourcesControlCenter"
+	"phoenixbuilder/GameControl/ResourcesControlCenter"
 	"phoenixbuilder/minecraft/protocol"
 	"phoenixbuilder/minecraft/protocol/packet"
 )

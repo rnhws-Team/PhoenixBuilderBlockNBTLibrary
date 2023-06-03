@@ -2,7 +2,7 @@ package GlobalAPI
 
 import (
 	"fmt"
-	"phoenixbuilder/ResourcesControlCenter"
+	"phoenixbuilder/GameControl/ResourcesControlCenter"
 	"phoenixbuilder/minecraft/protocol"
 	"phoenixbuilder/minecraft/protocol/packet"
 )

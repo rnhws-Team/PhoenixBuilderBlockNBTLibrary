@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/gob"
 	"fmt"
-	"phoenixbuilder/ResourcesControlCenter"
+	"phoenixbuilder/GameControl/ResourcesControlCenter"
 )
 
 func main() {

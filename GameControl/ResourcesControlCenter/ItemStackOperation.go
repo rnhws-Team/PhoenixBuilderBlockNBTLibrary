@@ -53,10 +53,10 @@ func (i *itemStackReuqestWithResponce) WriteRequest(
 	// return
 }
 
-// 加载请求 ID 为 key 的物品操作请求
-func (i *itemStackReuqestWithResponce) LoadRequest(key int32) (singleItemStackRequest, error) {
+// 加载请求 ID 为 key 的物品操作请求，属于私有实现
+func (i *itemStackReuqestWithResponce) loadRequest(key int32) (singleItemStackRequest, error) {
 	if !i.TestRequest(key) {
-		return singleItemStackRequest{}, fmt.Errorf("LoadRequest: %v is not recorded in i.itemStackRequest.datas", key)
+		return singleItemStackRequest{}, fmt.Errorf("loadRequest: %v is not recorded in i.itemStackRequest.datas", key)
 	}
 	// if key is not exist
 	i.itemStackRequest.lockDown.RLock()
@@ -148,13 +148,13 @@ func (i *itemStackReuqestWithResponce) AwaitResponce(key int32) {
 	// await responce
 }
 
-// 以原子操作获取上一次的请求 ID ，也就是 RequestID 。
+// 以原子操作获取上一次的请求 ID ，即 RequestID 。
 // 如果从未进行过物品操作，则将会返回 1
 func (i *itemStackReuqestWithResponce) GetCurrentRequestID() int32 {
 	return atomic.LoadInt32(&i.currentRequestID)
 }
 
-// 以原子操作获取一个唯一的请求 ID ，也就是 RequestID
+// 以原子操作获取一个新的请求 ID ，即 RequestID
 func (i *itemStackReuqestWithResponce) GetNewRequestID() int32 {
 	return atomic.AddInt32(&i.currentRequestID, -2)
 }
@@ -258,7 +258,7 @@ func (i *itemStackReuqestWithResponce) updateItemData(
 	resp protocol.ItemStackResponse,
 	inventory *inventoryContents,
 ) error {
-	datas, err := i.LoadRequest(resp.RequestID)
+	datas, err := i.loadRequest(resp.RequestID)
 	if err != nil {
 		return fmt.Errorf("updateItemData: %v", err)
 	}

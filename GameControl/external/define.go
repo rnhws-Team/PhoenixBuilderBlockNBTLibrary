@@ -2,8 +2,6 @@ package external
 
 import (
 	"phoenixbuilder/GameControl/GlobalAPI"
-
-	"github.com/google/uuid"
 )
 
 // ------------------------- General -------------------------
@@ -26,9 +24,10 @@ type Return interface{}  // 指代函数的返回值
 type RequestHeader struct {
 	// 指代数据版本。此字段可能会用作后向兼容的依据
 	Version string `json:"version"`
-	// 指代回声。如果指定了此字段，
-	// 那么响应包也会同时包含它。
-	// 否则反之
+	// 指代回声，用于使用者区别每个请求的响应包。
+	// 如果指定了此字段，
+	// 那么响应包中也会包含一个完全相同的 request_id 字段。
+	// 如果没有提供此字段，则响应包中将不会存在 request_id
 	Echo *string `json:"request_id"`
 	// 指代请求者，这并不是必须的
 	Requester string `json:"requester"`
@@ -60,7 +59,7 @@ type Request struct {
 type Responce struct {
 	// 指代此响应对应请求的回声。
 	// 只有请求中提供了此字段时才会存在
-	Echo *uuid.UUID `json:"request_id"`
+	Echo string `json:"request_id"`
 	// 指代对应请求的完成时间
 	FinishTime string `json:"finish_time"`
 	// 指代请求的函数的返回值

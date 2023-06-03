@@ -27,7 +27,7 @@ type RequestHeader struct {
 	// 指代回声，用于使用者区别每个请求的响应包。
 	// 如果指定了此字段，
 	// 那么响应包中也会包含一个完全相同的 request_id 字段。
-	// 如果没有提供此字段，则响应包中将不会存在 request_id
+	// 如果没有提供此字段，则响应包中的 request_id 将为 null
 	Echo *string `json:"request_id"`
 	// 指代请求者，这并不是必须的
 	Requester string `json:"requester"`
@@ -57,9 +57,10 @@ type Request struct {
 
 // 描述单个请求所对应的响应
 type Responce struct {
-	// 指代此响应对应请求的回声。
-	// 只有请求中提供了此字段时才会存在
-	Echo string `json:"request_id"`
+	// 指代此响应包所对应的请求包的回声。
+	// 只有此响应包对应的请求包中提供了此字段时才会存在，
+	// 否则为 null
+	Echo *string `json:"request_id"`
 	// 指代对应请求的完成时间
 	FinishTime string `json:"finish_time"`
 	// 指代请求的函数的返回值

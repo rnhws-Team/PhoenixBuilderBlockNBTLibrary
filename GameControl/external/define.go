@@ -29,10 +29,12 @@ type RequestHeader struct {
 	// 那么响应包中也会包含一个完全相同的 request_id 字段。
 	// 如果没有提供此字段，则响应包中的 request_id 将为 null
 	Echo *string `json:"request_id"`
+	// 指代是否返回当次请求对应的响应包。
+	// 当为假时，请求结果将不会送回，
+	// 也不会存在回声
+	GetResponce bool `json:"get_responce"`
 	// 指代请求者，这并不是必须的
 	Requester string `json:"requester"`
-	// 是否以协程执行当次请求
-	EnableCoroutine bool `json:"enable_coroutine"`
 	// 是否在控制台打印函数的执行状况
 	PrintRunningSituation bool `json:"print_running_situation"`
 	// 是否在抛出惊慌时抑制错误

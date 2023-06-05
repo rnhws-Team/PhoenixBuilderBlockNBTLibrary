@@ -2,7 +2,7 @@ package blockNBT
 
 import (
 	"fmt"
-	GlobalAPI "phoenixbuilder/Interaction"
+	GlobalAPI "phoenixbuilder/GameControl/GlobalAPI"
 	"phoenixbuilder/fastbuilder/types"
 )
 

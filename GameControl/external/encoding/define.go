@@ -15,6 +15,11 @@ func (b *Buffer) InitBuffer() {
 	b.buffer = bytes.NewBuffer([]byte{})
 }
 
+// 将底层切片替换为 buffer
+func (b *Buffer) ReplaceBuffer(buffer *bytes.Buffer) {
+	b.buffer = buffer
+}
+
 // 取得 Buffer 的底层切片，是一个指针
 func (b *Buffer) GetBuffer() *bytes.Buffer {
 	return b.buffer

@@ -5,10 +5,7 @@ import (
 	"fmt"
 )
 
-// 从 Buffer 阅读 length 个字节。
-// 如果阅读过程中发生了错误，
-// 亦或阅读所得的字节数少于 length ，
-// 那么此函数将返回错误
+// 从 Buffer 阅读 length 个字节
 func (b *Buffer) ReadBytes(length int) ([]byte, error) {
 	ans := make([]byte, length)
 	_, err := b.buffer.Read(ans)

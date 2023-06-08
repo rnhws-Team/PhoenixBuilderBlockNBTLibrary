@@ -32,7 +32,7 @@ func (b *Buffer) EncodeHeader(value interface{}) bool {
 // 如果 str 为 nil ，则仅会写入 0 ，
 // 否则写入 1 并写入字符串数据
 func (b *Buffer) EncodeString(str *string) error {
-	if len(*str) > 65535 {
+	if len(*str) > StringLengthMaxLimited {
 		return fmt.Errorf("EncodeString: The length of the target string is out of the max limited %v", StringLengthMaxLimited)
 	}
 	// check length

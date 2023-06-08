@@ -1,56 +1,19 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"phoenixbuilder/minecraft/protocol/packet"
+	"phoenixbuilder/GameControl/external/encoding"
 )
 
 func main() {
-	var pkt packet.InventoryTransaction
-	m := `{
-		"LegacyRequestID": 0,
-		"LegacySetItemSlots": null,
-		"Actions": [],
-		"TransactionData": {
-			"LegacyRequestID": 0,
-			"LegacySetItemSlots": null,
-			"Actions": null,
-			"ActionType": 0,
-			"BlockPosition": [
-				23,
-				23,
-				23
-			],
-			"BlockFace": 0,
-			"HotBarSlot": 3,
-			"HeldItem": {
-				"StackNetworkID": 0,
-				"Stack": {
-					"NetworkID": 0,
-					"MetadataValue": 0,
-					"BlockRuntimeID": 0,
-					"Count": 0,
-					"NBTData": null,
-					"CanBePlacedOn": null,
-					"CanBreak": null,
-					"HasNetworkID": false
-				}
-			},
-			"Position": [
-				0,
-				0,
-				0
-			],
-			"ClickedPosition": [
-				0,
-				0,
-				0
-			],
-			"BlockRuntimeID": 0
-		}
-	}`
-	err := json.Unmarshal([]byte(m), &pkt)
-	fmt.Printf("%#v\n", pkt)
-	fmt.Println(err)
+	buf := encoding.Buffer{}
+	buf.InitBuffer()
+	buf.GetBuffer().Write([]byte{1, 0, 1})
+	buf.GetBuffer().Write([]byte("ss"))
+	fmt.Println(buf.GetBuffer().Bytes())
+	ans, err := buf.DecodeString()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(*ans)
 }

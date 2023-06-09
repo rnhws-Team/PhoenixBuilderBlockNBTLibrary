@@ -5,58 +5,30 @@ import (
 	"fmt"
 )
 
-// 从 Buffer 阅读 length 个字节
-func (b *Buffer) ReadBytes(length int) ([]byte, error) {
+// 从阅读器阅读 length 个字节
+func (r *Reader) ReadBytes(length int) ([]byte, error) {
 	ans := make([]byte, length)
-	_, err := b.buffer.Read(ans)
+	_, err := r.r.Read(ans)
 	if err != nil {
 		return nil, fmt.Errorf("ReadBytes: %v", err)
 	}
 	return ans, nil
 }
 
-// 从 Buffer 阅读一个数据头。
-// 如果当前数据不存在，也就是其应当为 nil ，
-// 则返回值第一项为假，否则为真
-func (b *Buffer) DecodeHeader() (bool, error) {
-	headerBytes, err := b.ReadBytes(1)
-	if err != nil {
-		return false, fmt.Errorf("DecodeReader: %v", err)
-	}
-	// get header
-	switch header := headerBytes[0]; header {
-	case 0:
-		return false, nil
-	case 1:
-		return true, nil
-	default:
-		return false, fmt.Errorf("DecodeHeader: Unexpected header %#v was find", header)
-	}
-	// check header and return
-}
-
-// 从 buffer 阅读一个字符串
-func (b *Buffer) DecodeString() (*string, error) {
-	exist, err := b.DecodeHeader()
-	if err != nil {
-		return nil, fmt.Errorf("DecodeString: %v", err)
-	}
-	if !exist {
-		return nil, nil
-	}
-	// check if this is exist
+// 从阅读器阅读一个字符串并返回到 x 上
+func (r *Reader) String(x *string) error {
 	var length uint16
-	err = binary.Read(b.buffer, binary.BigEndian, &length)
+	err := binary.Read(r.r, binary.BigEndian, &length)
 	if err != nil {
-		return nil, fmt.Errorf("DecodeString: %v", err)
+		return fmt.Errorf("(r *Reader) String: %v", err)
 	}
 	// get the length of the target string
-	stringBytes, err := b.ReadBytes(int(length))
+	stringBytes, err := r.ReadBytes(int(length))
 	if err != nil {
-		return nil, fmt.Errorf("DecodeString: %v", err)
+		return fmt.Errorf("(r *Reader) String: %v", err)
 	}
-	str := string(stringBytes)
+	*x = string(stringBytes)
 	// get the target string
-	return &str, nil
+	return nil
 	// return
 }

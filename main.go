@@ -1,19 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"phoenixbuilder/GameControl/external/encoding"
 )
 
 func main() {
-	buf := encoding.Buffer{}
-	buf.InitBuffer()
-	buf.GetBuffer().Write([]byte{1, 0, 1})
-	buf.GetBuffer().Write([]byte("ss"))
-	fmt.Println(buf.GetBuffer().Bytes())
-	ans, err := buf.DecodeString()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(*ans)
+	reader := encoding.NewReader(bytes.NewBuffer([]byte{0, 1, 98}))
+	m := ""
+	encoding.IO.String(reader, &m)
+	fmt.Println(m)
+
+	writer := encoding.NewWriter(bytes.NewBuffer([]byte{}))
+	m = "b"
+	encoding.IO.String(writer, &m)
+	got, _ := writer.GetBuffer()
+	fmt.Println(got.Bytes())
 }

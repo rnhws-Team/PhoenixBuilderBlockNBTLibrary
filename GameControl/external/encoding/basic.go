@@ -1,26 +1,44 @@
 package encoding
 
-import "bytes"
+import (
+	"bytes"
+	"io"
+)
 
-const StringLengthMaxLimited = 65535 // 单个字符串的最大长度上限
-
-// 用于读写二进制数据包的结构体
-type Buffer struct {
-	buffer *bytes.Buffer
+// 用于读取二进制切片的阅读器
+type Reader struct {
+	r interface {
+		io.Reader
+		io.ByteReader
+	}
 }
 
-// 初始化 Buffer 为可读写状态。
-// 每次调用此函数后，底层切片将会被重置为空
-func (b *Buffer) InitBuffer() {
-	b.buffer = bytes.NewBuffer([]byte{})
+// 用于写入二进制切片的写入者
+type Writer struct {
+	w interface {
+		io.Writer
+		io.ByteWriter
+	}
 }
 
-// 将底层切片替换为 buffer
-func (b *Buffer) ReplaceBuffer(buffer *bytes.Buffer) {
-	b.buffer = buffer
+// 创建一个新的阅读器
+func NewReader(reader *bytes.Buffer) *Reader {
+	return &Reader{r: reader}
 }
 
-// 取得 Buffer 的底层切片，是一个指针
-func (b *Buffer) GetBuffer() *bytes.Buffer {
-	return b.buffer
+// 创建一个新的写入者
+func NewWriter(writer *bytes.Buffer) *Writer {
+	return &Writer{w: writer}
+}
+
+// 取得阅读器的底层切片
+func (r *Reader) GetBuffer() (*bytes.Buffer, bool) {
+	ans, err := r.r.(*bytes.Buffer)
+	return ans, err
+}
+
+// 取得写入者的底层切片
+func (w *Writer) GetBuffer() (*bytes.Buffer, bool) {
+	ans, err := w.w.(*bytes.Buffer)
+	return ans, err
 }

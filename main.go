@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"phoenixbuilder/GameControl/external/encoding"
+	"phoenixbuilder/encoding"
 )
 
 func main() {

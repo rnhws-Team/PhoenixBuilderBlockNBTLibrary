@@ -3,6 +3,9 @@ package encoding
 import (
 	"encoding/binary"
 	"fmt"
+	"phoenixbuilder/minecraft/protocol"
+
+	"github.com/google/uuid"
 )
 
 // 从阅读器阅读 length 个字节
@@ -167,4 +170,76 @@ func (r *Reader) Int64(x *int64) error {
 		return fmt.Errorf("(r *Reader) Int64: %v", err)
 	}
 	return nil
+}
+
+// 从阅读器阅读一个 uuid.UUID 并返回到 x 上
+func (r *Reader) UUID(x *uuid.UUID) error {
+	p, err := r.ReadBytes(UUIDConstantLength)
+	if err != nil {
+		return fmt.Errorf("(r *Reader) UUID: %v", err)
+	}
+	// get binary of uuid
+	err = x.UnmarshalBinary(p)
+	if err != nil {
+		return fmt.Errorf("(r *Reader) UUID: %v", err)
+	}
+	// unmarshal
+	return nil
+	// return
+}
+
+// 从阅读器阅读一个 protocol.CommandOutputMessage 并返回到 x 上
+func (r *Reader) CommandOutputMessage(x *protocol.CommandOutputMessage) error {
+	err := r.Bool(&x.Success)
+	if err != nil {
+		return fmt.Errorf("(r *Reader) CommandOutputMessage: %v", err)
+	}
+	// Success
+	err = r.String(&x.Message)
+	if err != nil {
+		return fmt.Errorf("(r *Reader) CommandOutputMessage: %v", err)
+	}
+	// Message
+	var length uint32
+	err = binary.Read(r.r, binary.BigEndian, &length)
+	if err != nil {
+		return fmt.Errorf("(r *Reader) CommandOutputMessage: %v", err)
+	}
+	if length > 0 && x.Parameters == nil {
+		x.Parameters = []string{}
+	}
+	for i := 0; i < int(length); i++ {
+		tmp := ""
+		err = r.String(&tmp)
+		if err != nil {
+			return fmt.Errorf("(r *Reader) CommandOutputMessage: %v", err)
+		}
+		x.Parameters = append(x.Parameters, tmp)
+	}
+	// Parameters
+	return nil
+	// return
+}
+
+// 从阅读器阅读一个 []protocol.CommandOutputMessage 并返回到 x 上
+func (r *Reader) CommandOutputMessageSlice(x *[]protocol.CommandOutputMessage) error {
+	var length uint32
+	err := binary.Read(r.r, binary.BigEndian, &length)
+	if err != nil {
+		return fmt.Errorf("(r *Reader) CommandOutputMessageSlice: %v", err)
+	}
+	// get length
+	tmp := *x
+	for i := 0; i < int(length); i++ {
+		single := protocol.CommandOutputMessage{}
+		err = r.CommandOutputMessage(&single)
+		if err != nil {
+			return fmt.Errorf("(r *Reader) CommandOutputMessageSlice: %v", err)
+		}
+		tmp = append(tmp, single)
+	}
+	*x = tmp
+	// read data
+	return nil
+	// return
 }

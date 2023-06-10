@@ -38,6 +38,7 @@ type Request struct {
 	Body   RequestBody   `json:"body"`   // 指定当次请求的详细信息
 }
 
+// AutoMarshal...
 func (r *Request) Marshal(io encoding.IO) {
 	TestError(io.String(&r.Header.Version))
 	TestError(io.String(&r.Header.Echo))
@@ -49,5 +50,6 @@ func (r *Request) Marshal(io encoding.IO) {
 	TestError(io.String(&r.Body.Module))
 	TestError(io.String(&r.Body.SubModule))
 	TestError(io.String(&r.Body.FuncName))
+	r.Body.FuncInput.Marshal(io)
 	// body
 }

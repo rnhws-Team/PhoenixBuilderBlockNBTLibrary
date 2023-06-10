@@ -3,6 +3,9 @@ package encoding
 import (
 	"encoding/binary"
 	"fmt"
+	"phoenixbuilder/minecraft/protocol"
+
+	"github.com/google/uuid"
 )
 
 // 向写入者写入字节切片 p
@@ -166,4 +169,80 @@ func (w *Writer) Int64(x *int64) error {
 		return fmt.Errorf("(w *Writer) Int64: %v", err)
 	}
 	return nil
+}
+
+// 向写入者写入 x(uuid.UUID)
+func (w *Writer) UUID(x *uuid.UUID) error {
+	p, err := x.MarshalBinary()
+	if err != nil {
+		return fmt.Errorf("(w *Writer) UUID: %v", err)
+	}
+	// get binary of uuid
+	if len(p) != UUIDConstantLength {
+		return fmt.Errorf("(w *Writer) UUID: Unexpected length %v was find, but expected to be %v", len(p), UUIDConstantLength)
+	}
+	// check length
+	err = w.WriteBytes(p)
+	if err != nil {
+		return fmt.Errorf("(w *Writer) UUID: %v", err)
+	}
+	// writer binary of uuid
+	return nil
+	// return
+}
+
+// 向写入者写入 x(protocol.CommandOutputMessage)
+func (w *Writer) CommandOutputMessage(x *protocol.CommandOutputMessage) error {
+	err := w.Bool(&x.Success)
+	if err != nil {
+		return fmt.Errorf("(w *Writer) CommandOutputMessage: %v", err)
+	}
+	// Success
+	err = w.String(&x.Message)
+	if err != nil {
+		return fmt.Errorf("(w *Writer) CommandOutputMessage: %v", err)
+	}
+	// Message
+	if len(x.Parameters) > SliceLengthMaxLimited {
+		return fmt.Errorf("(w *Writer) CommandOutputMessage: The length of x.Parameters is out of the max limited %v", SliceLengthMaxLimited)
+	}
+	if x.Parameters == nil {
+		err = w.WriteBytes([]byte{0, 0, 0, 0})
+		if err != nil {
+			return fmt.Errorf("(w *Writer) CommandOutputMessage: %v", err)
+		}
+	} else {
+		binary.Write(w.w, binary.BigEndian, uint32(len(x.Parameters)))
+		for _, value := range x.Parameters {
+			err = w.String(&value)
+			if err != nil {
+				return fmt.Errorf("(w *Writer) CommandOutputMessage: %v", err)
+			}
+		}
+	}
+	// Parameters
+	return nil
+	// return
+}
+
+// 向写入者写入 x([]protocol.CommandOutputMessage)
+func (w *Writer) CommandOutputMessageSlice(x *[]protocol.CommandOutputMessage) error {
+	if len(*x) > SliceLengthMaxLimited {
+		return fmt.Errorf("(w *Writer) CommandOutputMessageSlice: The length of x is out of the max limited %v", SliceLengthMaxLimited)
+	}
+	// check length
+	err := binary.Write(w.w, binary.BigEndian, uint32(len(*x)))
+	if err != nil {
+		return fmt.Errorf("(w *Writer) CommandOutputMessageSlice: %v", err)
+	}
+	// write length
+	for _, value := range *x {
+		err = w.CommandOutputMessage(&value)
+		if err != nil {
+			return fmt.Errorf("(w *Writer) CommandOutputMessageSlice: %v", err)
+		}
+	}
+	// write data
+	return nil
+	// return
 }

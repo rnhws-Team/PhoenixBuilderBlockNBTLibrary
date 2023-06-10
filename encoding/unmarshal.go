@@ -205,9 +205,7 @@ func (r *Reader) CommandOutputMessage(x *protocol.CommandOutputMessage) error {
 	if err != nil {
 		return fmt.Errorf("(r *Reader) CommandOutputMessage: %v", err)
 	}
-	if length > 0 {
-		x.Parameters = make([]string, length)
-	}
+	x.Parameters = make([]string, length)
 	for i := 0; i < int(length); i++ {
 		err = r.String(&x.Parameters[i])
 		if err != nil {

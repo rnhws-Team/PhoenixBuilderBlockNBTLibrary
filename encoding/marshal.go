@@ -203,22 +203,26 @@ func (w *Writer) CommandOutputMessage(x *protocol.CommandOutputMessage) error {
 		return fmt.Errorf("(w *Writer) CommandOutputMessage: %v", err)
 	}
 	// Message
-	if len(x.Parameters) > SliceLengthMaxLimited {
-		return fmt.Errorf("(w *Writer) CommandOutputMessage: The length of x.Parameters is out of the max limited %v", SliceLengthMaxLimited)
-	}
 	if x.Parameters == nil {
 		err = w.WriteBytes([]byte{0, 0, 0, 0})
 		if err != nil {
 			return fmt.Errorf("(w *Writer) CommandOutputMessage: %v", err)
 		}
+		// write length(0)
 	} else {
+		if len(x.Parameters) > SliceLengthMaxLimited {
+			return fmt.Errorf("(w *Writer) CommandOutputMessage: The length of x.Parameters is out of the max limited %v", SliceLengthMaxLimited)
+		}
+		// check length
 		binary.Write(w.w, binary.BigEndian, uint32(len(x.Parameters)))
+		// write length
 		for _, value := range x.Parameters {
 			err = w.String(&value)
 			if err != nil {
 				return fmt.Errorf("(w *Writer) CommandOutputMessage: %v", err)
 			}
 		}
+		// write data
 	}
 	// Parameters
 	return nil

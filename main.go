@@ -7,14 +7,16 @@ import (
 )
 
 func main() {
-	reader := encoding.NewReader(bytes.NewBuffer([]byte{0, 1, 98}))
-	m := ""
-	encoding.IO.String(reader, &m)
-	fmt.Println(m)
-
 	writer := encoding.NewWriter(bytes.NewBuffer([]byte{}))
-	m = "b"
-	encoding.IO.String(writer, &m)
-	got, _ := writer.GetBuffer()
-	fmt.Println(got.Bytes())
+	var new encoding.IO
+	new = writer
+	num := int8(-23)
+	new.Int8(&num)
+
+	get, _ := writer.GetBuffer()
+	reader := encoding.NewReader(get)
+	new = reader
+	newNum := int8(0)
+	new.Int8(&newNum)
+	fmt.Println(newNum)
 }

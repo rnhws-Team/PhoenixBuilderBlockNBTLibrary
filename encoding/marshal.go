@@ -85,7 +85,7 @@ func (w *Writer) Uint8(x *uint8) error {
 
 // 向写入者写入 x(int8)
 func (w *Writer) Int8(x *int8) error {
-	err := w.WriteBytes([]byte{byte(*x)})
+	err := binary.Write(w.w, binary.BigEndian, *x)
 	if err != nil {
 		return fmt.Errorf("(w *Writer) Int8: %v", err)
 	}
@@ -94,9 +94,7 @@ func (w *Writer) Int8(x *int8) error {
 
 // 向写入者写入 x(uint16)
 func (w *Writer) Uint16(x *uint16) error {
-	tmp := make([]byte, 2)
-	binary.BigEndian.PutUint16(tmp, *x)
-	err := w.WriteBytes(tmp)
+	err := binary.Write(w.w, binary.BigEndian, *x)
 	if err != nil {
 		return fmt.Errorf("(w *Writer) Uint16: %v", err)
 	}
@@ -105,9 +103,7 @@ func (w *Writer) Uint16(x *uint16) error {
 
 // 向写入者写入 x(int16)
 func (w *Writer) Int16(x *int16) error {
-	tmp := make([]byte, 2)
-	binary.BigEndian.PutUint16(tmp, uint16(*x))
-	err := w.WriteBytes(tmp)
+	err := binary.Write(w.w, binary.BigEndian, *x)
 	if err != nil {
 		return fmt.Errorf("(w *Writer) Int16: %v", err)
 	}
@@ -116,9 +112,7 @@ func (w *Writer) Int16(x *int16) error {
 
 // 向写入者写入 x(uint32)
 func (w *Writer) Uint32(x *uint32) error {
-	tmp := make([]byte, 2)
-	binary.BigEndian.PutUint32(tmp, *x)
-	err := w.WriteBytes(tmp)
+	err := binary.Write(w.w, binary.BigEndian, *x)
 	if err != nil {
 		return fmt.Errorf("(w *Writer) Uint32: %v", err)
 	}
@@ -127,9 +121,7 @@ func (w *Writer) Uint32(x *uint32) error {
 
 // 向写入者写入 x(int32)
 func (w *Writer) Int32(x *int32) error {
-	tmp := make([]byte, 2)
-	binary.BigEndian.PutUint32(tmp, uint32(*x))
-	err := w.WriteBytes(tmp)
+	err := binary.Write(w.w, binary.BigEndian, *x)
 	if err != nil {
 		return fmt.Errorf("(w *Writer) Int32: %v", err)
 	}
@@ -138,9 +130,7 @@ func (w *Writer) Int32(x *int32) error {
 
 // 向写入者写入 x(uint64)
 func (w *Writer) Uint64(x *uint64) error {
-	tmp := make([]byte, 2)
-	binary.BigEndian.PutUint64(tmp, *x)
-	err := w.WriteBytes(tmp)
+	err := binary.Write(w.w, binary.BigEndian, *x)
 	if err != nil {
 		return fmt.Errorf("(w *Writer) Uint64: %v", err)
 	}
@@ -149,9 +139,7 @@ func (w *Writer) Uint64(x *uint64) error {
 
 // 向写入者写入 x(int64)
 func (w *Writer) Int64(x *int64) error {
-	tmp := make([]byte, 2)
-	binary.BigEndian.PutUint64(tmp, uint64(*x))
-	err := w.WriteBytes(tmp)
+	err := binary.Write(w.w, binary.BigEndian, *x)
 	if err != nil {
 		return fmt.Errorf("(w *Writer) Int64: %v", err)
 	}

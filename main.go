@@ -10,13 +10,13 @@ func main() {
 	writer := encoding.NewWriter(bytes.NewBuffer([]byte{}))
 	var new encoding.IO
 	new = writer
-	num := int8(-23)
-	new.Int8(&num)
+	MAP := map[string][]byte{"你好": {2, 0, 1, 8}, "hi": {8, 1, 0, 2}}
+	new.Map(&MAP)
 
 	get, _ := writer.GetBuffer()
 	reader := encoding.NewReader(get)
 	new = reader
-	newNum := int8(0)
-	new.Int8(&newNum)
-	fmt.Println(newNum)
+	newMAP := map[string][]byte{}
+	new.Map(&newMAP)
+	fmt.Println(newMAP)
 }

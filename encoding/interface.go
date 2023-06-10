@@ -16,6 +16,7 @@ type IOGet interface {
 type IO interface {
 	Slice(x *[]byte) error
 	String(x *string) error
+	Map(x *map[string][]byte) error
 	Bool(x *bool) error
 	Uint8(x *uint8) error
 	Int8(x *int8) error

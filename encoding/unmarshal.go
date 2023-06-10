@@ -51,6 +51,34 @@ func (r *Reader) String(x *string) error {
 	// return
 }
 
+// 从阅读器阅读一个 map[string][]byte 并返回到 x 上
+func (r *Reader) Map(x *map[string][]byte) error {
+	var length uint16
+	err := binary.Read(r.r, binary.BigEndian, &length)
+	if err != nil {
+		return fmt.Errorf("(r *Reader) Map: %v", err)
+	}
+	// get the length of the target map
+	tmp := *x
+	for i := 0; i < int(length); i++ {
+		key := ""
+		value := []byte{}
+		err = r.String(&key)
+		if err != nil {
+			return fmt.Errorf("(r *Reader) Map: %v", err)
+		}
+		err = r.Slice(&value)
+		if err != nil {
+			return fmt.Errorf("(r *Reader) Map: %v", err)
+		}
+		tmp[key] = value
+	}
+	*x = tmp
+	// read map and unmarshal it into x
+	return nil
+	// return
+}
+
 // 从阅读器阅读一个布尔值并返回到 x 上
 func (r *Reader) Bool(x *bool) error {
 	ans, err := r.ReadBytes(1)

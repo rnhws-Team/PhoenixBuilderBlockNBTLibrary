@@ -20,9 +20,7 @@ func (w *Writer) Slice(x *[]byte) error {
 		return fmt.Errorf("(w *Writer) Slice: The length of the target slice is out of the max limited %v", SliceLengthMaxLimited)
 	}
 	// check length
-	lengthBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(lengthBytes, uint32(len(*x)))
-	err := w.WriteBytes(lengthBytes)
+	err := binary.Write(w.w, binary.BigEndian, uint32(len(*x)))
 	if err != nil {
 		return fmt.Errorf("(w *Writer) Slice: %v", err)
 	}
@@ -42,9 +40,7 @@ func (w *Writer) String(x *string) error {
 		return fmt.Errorf("(w *Writer) String: The length of the target string is out of the max limited %v", StringLengthMaxLimited)
 	}
 	// check length
-	lengthBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(lengthBytes, uint16(len(*x)))
-	err := w.WriteBytes(lengthBytes)
+	err := binary.Write(w.w, binary.BigEndian, uint16(len(*x)))
 	if err != nil {
 		return fmt.Errorf("(w *Writer) String: %v", err)
 	}
@@ -54,6 +50,32 @@ func (w *Writer) String(x *string) error {
 		return fmt.Errorf("(w *Writer) String: %v", err)
 	}
 	// write string
+	return nil
+	// return
+}
+
+// 向写入者写入 map[string][]byte
+func (w *Writer) Map(x *map[string][]byte) error {
+	if len(*x) > MapLengthMaxLimited {
+		return fmt.Errorf("(w *Writer) Map: The length of the target map is out of the max limited %v", MapLengthMaxLimited)
+	}
+	// check length
+	err := binary.Write(w.w, binary.BigEndian, uint16(len(*x)))
+	if err != nil {
+		return fmt.Errorf("(w *Writer) Map: %v", err)
+	}
+	// write the length of the target map
+	for key, value := range *x {
+		err := w.String(&key)
+		if err != nil {
+			return fmt.Errorf("(w *Writer) Map: %v", err)
+		}
+		err = w.Slice(&value)
+		if err != nil {
+			return fmt.Errorf("(w *Writer) Map: %v", err)
+		}
+	}
+	// write map
 	return nil
 	// return
 }

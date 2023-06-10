@@ -205,16 +205,14 @@ func (r *Reader) CommandOutputMessage(x *protocol.CommandOutputMessage) error {
 	if err != nil {
 		return fmt.Errorf("(r *Reader) CommandOutputMessage: %v", err)
 	}
-	if length > 0 && x.Parameters == nil {
-		x.Parameters = []string{}
+	if length > 0 {
+		x.Parameters = make([]string, length)
 	}
 	for i := 0; i < int(length); i++ {
-		tmp := ""
-		err = r.String(&tmp)
+		err = r.String(&x.Parameters[i])
 		if err != nil {
 			return fmt.Errorf("(r *Reader) CommandOutputMessage: %v", err)
 		}
-		x.Parameters = append(x.Parameters, tmp)
 	}
 	// Parameters
 	return nil
@@ -229,14 +227,13 @@ func (r *Reader) CommandOutputMessageSlice(x *[]protocol.CommandOutputMessage) e
 		return fmt.Errorf("(r *Reader) CommandOutputMessageSlice: %v", err)
 	}
 	// get length
+	*x = make([]protocol.CommandOutputMessage, length)
 	tmp := *x
 	for i := 0; i < int(length); i++ {
-		single := protocol.CommandOutputMessage{}
-		err = r.CommandOutputMessage(&single)
+		err = r.CommandOutputMessage(&tmp[i])
 		if err != nil {
 			return fmt.Errorf("(r *Reader) CommandOutputMessageSlice: %v", err)
 		}
-		tmp = append(tmp, single)
 	}
 	*x = tmp
 	// read data

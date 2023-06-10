@@ -1,9 +1,16 @@
 package encoding
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 )
+
+// 取得写入者的底层切片
+func (w *Writer) GetBuffer() (*bytes.Buffer, bool) {
+	ans, err := w.w.(*bytes.Buffer)
+	return ans, err
+}
 
 // 向写入者写入字节切片 p
 func (w *Writer) WriteBytes(p []byte) error {

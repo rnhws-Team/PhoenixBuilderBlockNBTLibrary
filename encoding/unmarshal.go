@@ -1,16 +1,9 @@
 package encoding
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 )
-
-// 取得阅读器的底层切片
-func (r *Reader) GetBuffer() (*bytes.Buffer, bool) {
-	ans, err := r.r.(*bytes.Buffer)
-	return ans, err
-}
 
 // 从阅读器阅读 length 个字节
 func (r *Reader) ReadBytes(length int) ([]byte, error) {

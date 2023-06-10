@@ -2,21 +2,18 @@ package encoding
 
 import "bytes"
 
-// 创建一个新的阅读器
-func NewReader(reader *bytes.Buffer) *Reader {
-	return &Reader{r: reader}
-}
-
-// 创建一个新的写入者
-func NewWriter(writer *bytes.Buffer) *Writer {
-	return &Writer{w: writer}
+// 取得阅读器或写入者的底层切片
+type IOGet interface {
+	GetBuffer() (*bytes.Buffer, error)
 }
 
 // 为二进制数据实现的 IO 操作流。
 // 以下列出的每个函数都提供了两个实现，
-// 以允许 Marshal 或 UnMarshal 二进制数据
+// 以允许 Marshal 或 UnMarshal 二进制数据。
+//
+// 当传入 encoding.Reader 时，数据将从 encoding.Reader 解码至 x ，
+// 当传入 encoding.Writer 时，x 将被编码至 encoding.Writer
 type IO interface {
-	GetBuffer() (*bytes.Buffer, bool)
 	Slice(x *[]byte) error
 	String(x *string) error
 	Bool(x *bool) error

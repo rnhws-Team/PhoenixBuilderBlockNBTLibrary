@@ -6,12 +6,12 @@ import (
 )
 
 // 创建一个新的阅读器
-func NewReader(reader *bytes.Buffer) *Reader {
+func NewReader(reader *bytes.Buffer) IO {
 	return &Reader{r: reader}
 }
 
 // 创建一个新的写入者
-func NewWriter(writer *bytes.Buffer) *Writer {
+func NewWriter(writer *bytes.Buffer) IO {
 	return &Writer{w: writer}
 }
 

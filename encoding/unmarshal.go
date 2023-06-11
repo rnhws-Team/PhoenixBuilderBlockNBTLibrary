@@ -54,6 +54,27 @@ func (r *Reader) String(x *string) error {
 	// return
 }
 
+// 从阅读器阅读一个字符串切片并返回到 x 上
+func (r *Reader) StringSlice(x *[]string) error {
+	var length uint32
+	err := binary.Read(r.r, binary.BigEndian, &length)
+	if err != nil {
+		return fmt.Errorf("(r *Reader) StringSlice: %v", err)
+	}
+	// get the length of the target slice
+	*x = make([]string, length)
+	// make
+	for i := 0; i < int(length); i++ {
+		err = r.String(&(*x)[i])
+		if err != nil {
+			return fmt.Errorf("(r *Reader) StringSlice: %v", err)
+		}
+	}
+	// get the target slice
+	return nil
+	// return
+}
+
 // 从阅读器阅读一个 map[string][]byte 并返回到 x 上
 func (r *Reader) Map(x *map[string][]byte) error {
 	var length uint16
@@ -62,7 +83,6 @@ func (r *Reader) Map(x *map[string][]byte) error {
 		return fmt.Errorf("(r *Reader) Map: %v", err)
 	}
 	// get the length of the target map
-	tmp := *x
 	for i := 0; i < int(length); i++ {
 		key := ""
 		value := []byte{}
@@ -74,9 +94,8 @@ func (r *Reader) Map(x *map[string][]byte) error {
 		if err != nil {
 			return fmt.Errorf("(r *Reader) Map: %v", err)
 		}
-		tmp[key] = value
+		(*x)[key] = value
 	}
-	*x = tmp
 	// read map and unmarshal it into x
 	return nil
 	// return
@@ -200,17 +219,12 @@ func (r *Reader) CommandOutputMessage(x *protocol.CommandOutputMessage) error {
 		return fmt.Errorf("(r *Reader) CommandOutputMessage: %v", err)
 	}
 	// Message
-	var length uint32
-	err = binary.Read(r.r, binary.BigEndian, &length)
+	if x.Parameters == nil {
+		x.Parameters = make([]string, 0)
+	}
+	err = r.StringSlice(&x.Parameters)
 	if err != nil {
 		return fmt.Errorf("(r *Reader) CommandOutputMessage: %v", err)
-	}
-	x.Parameters = make([]string, length)
-	for i := 0; i < int(length); i++ {
-		err = r.String(&x.Parameters[i])
-		if err != nil {
-			return fmt.Errorf("(r *Reader) CommandOutputMessage: %v", err)
-		}
 	}
 	// Parameters
 	return nil
@@ -226,14 +240,13 @@ func (r *Reader) CommandOutputMessageSlice(x *[]protocol.CommandOutputMessage) e
 	}
 	// get length
 	*x = make([]protocol.CommandOutputMessage, length)
-	tmp := *x
+	// make
 	for i := 0; i < int(length); i++ {
-		err = r.CommandOutputMessage(&tmp[i])
+		err = r.CommandOutputMessage(&(*x)[i])
 		if err != nil {
 			return fmt.Errorf("(r *Reader) CommandOutputMessageSlice: %v", err)
 		}
 	}
-	*x = tmp
 	// read data
 	return nil
 	// return

@@ -57,6 +57,28 @@ func (w *Writer) String(x *string) error {
 	// return
 }
 
+// 向写入者写入字符串切片 x
+func (w *Writer) StringSlice(x *[]string) error {
+	if len(*x) > SliceLengthMaxLimited {
+		return fmt.Errorf("(w *Writer) StringSlice: The length of the target slice is out of the max limited %v", SliceLengthMaxLimited)
+	}
+	// check length
+	err := binary.Write(w.w, binary.BigEndian, uint32(len(*x)))
+	if err != nil {
+		return fmt.Errorf("(w *Writer) StringSlice: %v", err)
+	}
+	// write the length of the target slice
+	for _, value := range *x {
+		err = w.String(&value)
+		if err != nil {
+			return fmt.Errorf("(w *Writer) StringSlice: %v", err)
+		}
+	}
+	// write slice
+	return nil
+	// return
+}
+
 // 向写入者写入 map[string][]byte
 func (w *Writer) Map(x *map[string][]byte) error {
 	if len(*x) > MapLengthMaxLimited {
@@ -208,21 +230,11 @@ func (w *Writer) CommandOutputMessage(x *protocol.CommandOutputMessage) error {
 		if err != nil {
 			return fmt.Errorf("(w *Writer) CommandOutputMessage: %v", err)
 		}
-		// write length(0)
 	} else {
-		if len(x.Parameters) > SliceLengthMaxLimited {
-			return fmt.Errorf("(w *Writer) CommandOutputMessage: The length of x.Parameters is out of the max limited %v", SliceLengthMaxLimited)
+		err = w.StringSlice(&x.Parameters)
+		if err != nil {
+			return fmt.Errorf("(w *Writer) CommandOutputMessage: %v", err)
 		}
-		// check length
-		binary.Write(w.w, binary.BigEndian, uint32(len(x.Parameters)))
-		// write length
-		for _, value := range x.Parameters {
-			err = w.String(&value)
-			if err != nil {
-				return fmt.Errorf("(w *Writer) CommandOutputMessage: %v", err)
-			}
-		}
-		// write data
 	}
 	// Parameters
 	return nil

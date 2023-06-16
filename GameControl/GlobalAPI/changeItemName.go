@@ -45,7 +45,7 @@ func (g *GlobalAPI) ChangeItemName(
 			gob.Register(map[string]interface{}{})
 		},
 	)
-	// 取得已放入铁砧的物品的物品数据
+	// 取得已放入铁砧的物品的物品数据并保存在 itemDatas 处
 	var backup protocol.ItemInstance
 	ResourcesControlCenter.DeepCopy(
 		&get,
@@ -54,20 +54,25 @@ func (g *GlobalAPI) ChangeItemName(
 			gob.Register(map[string]interface{}{})
 		},
 	)
-	// 备份物品数据
-	filterAns, err := g.Resources.Inventory.ListSlot(0, &[]int32{0})
-	if err != nil {
-		panic(fmt.Sprintf("ChangeItemName: %v", err))
+	// 备份物品数据到 backup 处
+	getOptionalSlot := func() []uint8 {
+		filterAns, err := g.Resources.Inventory.ListSlot(0, &[]int32{0})
+		if err != nil {
+			panic(fmt.Sprintf("ChangeItemName: %v", err))
+		}
+		// 筛选出背包中还未被占用实际物品的物品栏
+		optionalSlot := []uint8{slot}
+		optionalSlot = append(optionalSlot, filterAns...)
+		if len(filterAns) <= 0 {
+			optionalSlot = []uint8{}
+		}
+		// optionalSlot 指代被操作物品最终可能出现的位置
+		return optionalSlot
+		// return
 	}
-	// 筛选出背包中还未被占用实际物品的物品栏
-	optionalSlot := []uint8{slot}
-	optionalSlot = append(optionalSlot, filterAns...)
-	if len(filterAns) <= 0 {
-		optionalSlot = []uint8{}
-	}
-	// optionalSlot 指代被操作物品最终可能出现的位置
+	// 构造一个函数以用于取得背包中的空气物品栏
 	revertFunc := func() (*AnvilOperationResponce, error) {
-		for _, value := range optionalSlot {
+		for _, value := range getOptionalSlot() {
 			placeStackRequestAction := protocol.PlaceStackRequestAction{}
 			placeStackRequestAction.Source = protocol.StackRequestSlotInfo{
 				ContainerID:    0,
@@ -139,7 +144,7 @@ func (g *GlobalAPI) ChangeItemName(
 		// 看起来背包已经满了，我们不得不把物品留在铁砧中
 	}
 	// 构造一个函数用于处理改名失败时的善后处理
-	for _, value := range optionalSlot {
+	for _, value := range getOptionalSlot() {
 		newRequestID := g.Resources.ItemStackOperation.GetNewRequestID()
 		// 请求一个新的 RequestID 用于 ItemStackRequest
 		placeStackRequestAction := protocol.PlaceStackRequestAction{}

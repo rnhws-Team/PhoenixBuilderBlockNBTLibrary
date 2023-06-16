@@ -1,5 +1,5 @@
-# phoenixbuilder/encoding
-`encoding(phoenixbuilder/encoding)` 包提供了一个二进制流编码和解码实现，它允许您简单地在网络上编码和解码二进制数据。
+# phoenixbuilder/lib/encoding
+`encoding(phoenixbuilder/lib/encoding)` 包提供了一个二进制流编码和解码实现，它允许您简单地在网络上编码和解码二进制数据。
 
 如果没有特殊说明，所有数字类型的数据都将以 `大端字节序(Big Endian)` 记录。
 

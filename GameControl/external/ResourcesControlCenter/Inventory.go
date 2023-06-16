@@ -1,11 +1,5 @@
 package external_resources
 
-import (
-	"phoenixbuilder/GameControl/GlobalAPI"
-	"phoenixbuilder/GameControl/external"
-	"phoenixbuilder/minecraft/protocol"
-)
-
 /*
 Function List
 
@@ -17,6 +11,7 @@ func (*inventoryContents).ListWindowID() []uint32
 
 // ------------------------- ListWindowID -------------------------
 
+/*
 type Inventory_ListWindowID struct {
 }
 
@@ -28,9 +23,11 @@ func (i *Inventory_ListWindowID) Run(env *GlobalAPI.GlobalAPI) external.Return {
 	resp := env.Resources.Inventory.ListWindowID()
 	return Inventory_ListWindowID_Return{ListResult: resp}
 }
+*/
 
 // ------------------------- ListSlot -------------------------
 
+/*
 type Inventory_ListSlot struct {
 	WindowID uint32   `json:"window_id"`
 	Filter   *[]int32 `json:"filter"`
@@ -48,9 +45,11 @@ func (i *Inventory_ListSlot) Run(env *GlobalAPI.GlobalAPI) external.Return {
 		Error:      err,
 	}
 }
+*/
 
 // ------------------------- GetInventoryInfo -------------------------
 
+/*
 type Inventory_GetInventoryInfo struct {
 	WindowID uint32 `json:"window_id"`
 }
@@ -67,9 +66,11 @@ func (i *Inventory_GetInventoryInfo) Run(env *GlobalAPI.GlobalAPI) external.Retu
 		Error:     err,
 	}
 }
+*/
 
 // ------------------------- GetItemStackInfo -------------------------
 
+/*
 type Inventory_GetItemStackInfo struct {
 	WindowID     uint32 `json:"window_id"`
 	SlotLocation uint8  `json:"slot_location"`
@@ -90,5 +91,6 @@ func (i *Inventory_GetItemStackInfo) Run(env *GlobalAPI.GlobalAPI) external.Retu
 		Error:    err,
 	}
 }
+*/
 
 // ------------------------- END -------------------------

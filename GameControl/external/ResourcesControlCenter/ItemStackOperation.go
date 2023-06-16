@@ -1,9 +1,7 @@
 package external_resources
 
 import (
-	"phoenixbuilder/GameControl/GlobalAPI"
 	"phoenixbuilder/GameControl/ResourcesControlCenter"
-	"phoenixbuilder/GameControl/external"
 	"phoenixbuilder/minecraft/protocol"
 )
 
@@ -30,6 +28,8 @@ func (*itemStackReuqestWithResponce).WriteRequest(key int32, datas map[Container
 
 // ------------------------- TestRequest -------------------------
 
+/*
+
 type ItemStackOperation_TestRequest struct {
 	Key int32 `json:"key"`
 }
@@ -44,9 +44,11 @@ func (i *ItemStackOperation_TestRequest) Run(
 	resp := env.Resources.ItemStackOperation.TestRequest(i.Key)
 	return ItemStackOperation_TestRequest_Return{Exist: resp}
 }
+*/
 
 // ------------------------- TestResponce -------------------------
 
+/*
 type ItemStackOperation_TestResponce struct {
 	Key int32 `json:"key"`
 }
@@ -61,9 +63,11 @@ func (i *ItemStackOperation_TestResponce) Run(
 	resp := env.Resources.ItemStackOperation.TestResponce(i.Key)
 	return ItemStackOperation_TestResponce_Return{Exist: resp}
 }
+*/
 
 // ------------------------- WriteRequest -------------------------
 
+/*
 type ItemStackOperation_WriteRequest struct {
 	Key   int32                                     `json:"key"`
 	Datas map[ContainerID]StackRequestContainerInfo `json:"datas"`
@@ -83,9 +87,11 @@ func (i *ItemStackOperation_WriteRequest) Run(
 	resp := env.Resources.ItemStackOperation.WriteRequest(i.Key, tmp)
 	return ItemStackOperation_WriteRequest_Return{Error: resp}
 }
+*/
 
 // ------------------------- LoadResponceAndDelete -------------------------
 
+/*
 type ItemStackOperation_LoadResponceAndDelete struct {
 	Key int32 `json:"key"`
 }
@@ -104,9 +110,11 @@ func (i *ItemStackOperation_LoadResponceAndDelete) Run(
 		Error:    err,
 	}
 }
+*/
 
 // ------------------------- AwaitResponce -------------------------
 
+/*
 type ItemStackOperation_AwaitResponce struct {
 	Key int32 `json:"key"`
 }
@@ -119,9 +127,11 @@ func (i *ItemStackOperation_AwaitResponce) Run(
 	env.Resources.ItemStackOperation.AwaitResponce(i.Key)
 	return ItemStackOperation_AwaitResponce_Return{}
 }
+*/
 
 // ------------------------- GetCurrentRequestID -------------------------
 
+/*
 type ItemStackOperation_GetCurrentRequestID struct{}
 
 type ItemStackOperation_GetCurrentRequestID_Return struct {
@@ -134,9 +144,11 @@ func (i *ItemStackOperation_GetCurrentRequestID) Run(
 	resp := env.Resources.ItemStackOperation.GetCurrentRequestID()
 	return ItemStackOperation_GetCurrentRequestID_Return{CurrentRequestID: resp}
 }
+*/
 
 // ------------------------- GetNewRequestID -------------------------
 
+/*
 type ItemStackOperation_GetNewRequestID struct{}
 
 type ItemStackOperation_GetNewRequestID_Return struct {
@@ -149,9 +161,11 @@ func (i *ItemStackOperation_GetNewRequestID) Run(
 	resp := env.Resources.ItemStackOperation.GetNewRequestID()
 	return ItemStackOperation_GetNewRequestID_Return{NewRequestID: resp}
 }
+*/
 
 // ------------------------- SetItemName -------------------------
 
+/*
 type ItemStackOperation_SetItemName struct {
 	ItemInfo    *protocol.ItemInstance `json:"item_info"`
 	NewItemName string                 `json:"new_item_name"`
@@ -171,9 +185,11 @@ func (i *ItemStackOperation_SetItemName) Run(
 		Error:       resp,
 	}
 }
+*/
 
 // ------------------------- GetNewItemData -------------------------
 
+/*
 type ItemStackOperation_GetNewItemData struct {
 	ItemInfo           protocol.ItemInstance          `json:"item_info"`
 	ResponceFromServer protocol.StackResponseSlotInfo `json:"responce_from_server"`
@@ -196,5 +212,6 @@ func (i *ItemStackOperation_GetNewItemData) Run(
 		Error:       err,
 	}
 }
+*/
 
 // ------------------------- END -------------------------

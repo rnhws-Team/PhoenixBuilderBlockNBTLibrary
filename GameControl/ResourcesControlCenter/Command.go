@@ -3,124 +3,60 @@ package ResourcesControlCenter
 import (
 	"fmt"
 	"phoenixbuilder/minecraft/protocol/packet"
-	"sync"
 
 	"github.com/google/uuid"
 )
 
-// 测定 key 是否在 c.commandRequest.datas 中。如果存在，那么返回真，否则返回假
-func (c *commandRequestWithResponce) TestRequest(key uuid.UUID) bool {
-	c.commandRequest.lockDown.RLock()
-	defer c.commandRequest.lockDown.RUnlock()
-	// init
-	_, ok := c.commandRequest.datas[key]
-	return ok
-	// return
-}
-
-// 测定 key 是否在 c.commandResponce.datas 中。如果存在，那么返回真，否则返回假
-func (c *commandRequestWithResponce) TestResponce(key uuid.UUID) bool {
-	c.commandResponce.lockDown.RLock()
-	defer c.commandResponce.lockDown.RUnlock()
-	// init
-	_, ok := c.commandResponce.datas[key]
-	return ok
-	// return
-}
-
-// 将名为 key 的命令请求放入 c.commandRequest.datas 并占用(锁定)此请求对应的互斥锁
+// 提交请求 ID 为 key 的命令请求
 func (c *commandRequestWithResponce) WriteRequest(key uuid.UUID) error {
-	if c.TestRequest(key) {
-		return fmt.Errorf("WriteRequest: %v is already exist in c.commandRequest.datas", key.String())
+	_, exist := c.requestWithResponce.Load(key)
+	if exist {
+		return fmt.Errorf("WriteRequest: %v has already existed", key.String())
 	}
-	// if key is already exist
-	c.commandRequest.lockDown.Lock()
-	defer c.commandRequest.lockDown.Unlock()
-	// lock down resources
-	c.commandRequest.datas[key] = &sync.Mutex{}
-	c.commandRequest.datas[key].Lock()
-	// lock down command request
+	// if key has already exist
+	c.requestWithResponce.Store(key, make(chan packet.CommandOutput, 1))
 	return nil
 	// return
 }
 
-// 将名为 key 的命令请求从 c.commandRequest.datas 中移除并释放此请求对应的互斥锁，
-// 属于私有实现
-func (c *commandRequestWithResponce) deleteRequest(key uuid.UUID) error {
-	if !c.TestRequest(key) {
-		return fmt.Errorf("deleteRequest: %v is not recorded in c.commandRequest.datas", key.String())
+// 尝试向请求 ID 为 key 的命令请求写入返回值 resp 。
+// 属于私有实现。
+// 如果 key 不存在，亦不会返回错误。
+func (c *commandRequestWithResponce) tryToWriteResponce(
+	key uuid.UUID,
+	resp packet.CommandOutput,
+) error {
+	value, exist := c.requestWithResponce.Load(key)
+	if !exist {
+		return nil
 	}
 	// if key is not exist
-	c.commandRequest.lockDown.Lock()
-	defer c.commandRequest.lockDown.Unlock()
-	// lock down resources
-	tmp := c.commandRequest.datas[key]
-	// get tmp of the current resources
-	delete(c.commandRequest.datas, key)
-	newMap := map[uuid.UUID]*sync.Mutex{}
-	for k, value := range c.commandRequest.datas {
-		newMap[k] = value
+	chanGet, normal := value.(chan packet.CommandOutput)
+	if !normal {
+		return fmt.Errorf("tryToWriteResponce: Failed to convert value into (chan packet.CommandOutput); value = %#v", value)
 	}
-	c.commandRequest.datas = newMap
-	// remove the key and values from c.commandRequest.datas
-	tmp.Unlock()
-	// unlock command request
+	// convert data
+	chanGet <- resp
+	close(chanGet)
 	return nil
 	// return
 }
 
-// 将命令请求的返回值写入 c.commandResponce.datas
-// 并释放 c.commandRequest.datas 中对应的互斥锁，属于私有实现
-func (c *commandRequestWithResponce) writeResponce(key uuid.UUID, resp packet.CommandOutput) error {
-	c.commandResponce.lockDown.Lock()
-	defer c.commandResponce.lockDown.Unlock()
-	// init
-	c.commandResponce.datas[key] = resp
-	// send command responce
-	err := c.deleteRequest(key)
-	if err != nil {
-		return fmt.Errorf("writeResponce: %v", err)
-	}
-	// remove command reuqest from c.commandRequest.datas
-	return nil
-	// return
-}
-
-// 从 c.commandResponce.datas 读取名为 key 的命令请求的返回值
-// 并将此返回值从 c.commandResponce.datas 移除
+// 读取请求 ID 为 key 的命令请求的返回值，
+// 同时移除此命令请求
 func (c *commandRequestWithResponce) LoadResponceAndDelete(key uuid.UUID) (packet.CommandOutput, error) {
-	if !c.TestResponce(key) {
-		return packet.CommandOutput{}, fmt.Errorf("loadResponceAndDelete: %v is not recorded in c.commandResponce.datas", key.String())
+	value, exist := c.requestWithResponce.Load(key)
+	if !exist {
+		return packet.CommandOutput{}, fmt.Errorf("LoadResponceAndDelete: %v is not recorded", key.String())
 	}
 	// if key is not exist
-	c.commandResponce.lockDown.Lock()
-	defer c.commandResponce.lockDown.Unlock()
-	// lock down resources
-	ans := c.commandResponce.datas[key]
-	newMap := map[uuid.UUID]packet.CommandOutput{}
-	for k, value := range c.commandResponce.datas {
-		newMap[k] = value
+	chanGet, normal := value.(chan packet.CommandOutput)
+	if !normal {
+		return packet.CommandOutput{}, fmt.Errorf("LoadResponceAndDelete: Failed to convert value into (chan packet.CommandOutput); value = %#v", value)
 	}
-	c.commandResponce.datas = newMap
-	// get responce and remove the key and values from c.commandResponce.datas
+	// convert data
+	ans := <-chanGet
+	c.requestWithResponce.Delete(key)
 	return ans, nil
 	// return
-}
-
-// 等待租赁服响应命令请求 key 。
-// 在调用此函数后，会持续阻塞直到此命令请求所对应的互斥锁被释放
-func (c *commandRequestWithResponce) AwaitResponce(key uuid.UUID) {
-	if !c.TestRequest(key) {
-		return
-	}
-	// if key is not exist
-	c.commandRequest.lockDown.RLock()
-	// lock down resources
-	tmp := c.commandRequest.datas[key]
-	// get tmp of the current resources
-	c.commandRequest.lockDown.RUnlock()
-	// unlock resources
-	tmp.Lock()
-	tmp.Unlock()
-	// await responce
 }

@@ -53,7 +53,6 @@ func (g *GlobalAPI) SendItemStackRequestWithResponce(
 	}
 	// 发送物品操作请求
 	for _, value := range requestIDList {
-		g.Resources.ItemStackOperation.AwaitResponce(value)
 		got, err := g.Resources.ItemStackOperation.LoadResponceAndDelete(value)
 		if err != nil {
 			return nil, fmt.Errorf("SendItemStackRequestWithResponce: %v", err)

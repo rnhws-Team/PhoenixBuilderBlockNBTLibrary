@@ -320,13 +320,11 @@ func (g *GlobalAPI) ChangeItemName(
 			panic(fmt.Sprintf("ChangeItemName: %v", err))
 		}
 		// 发送物品操作请求
-		g.Resources.ItemStackOperation.AwaitResponce(newRequestID)
-		// 等待租赁服响应物品操作请求
 		ans, err := g.Resources.ItemStackOperation.LoadResponceAndDelete(newRequestID)
 		if err != nil {
 			return revertFunc()
 		}
-		// 取得物品名称操作结果
+		// 等待租赁服响应物品操作请求并取得物品名称操作结果
 		if ans.Status == 0x9 {
 			return revertFunc()
 		}

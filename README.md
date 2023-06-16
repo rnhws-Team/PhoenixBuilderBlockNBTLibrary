@@ -1,5 +1,5 @@
 # PhoenixBuilderBlockNBTLibrary
-`PhoenixBuilderBlockNBTLibrary` 是基于 [_PhoenixBuilder_](https://github.com/LNSSPsd/PhoenixBuilder) 的第三方增强库，其中已经包含了以下功能。
+`PhoenixBuilderBlockNBTLibrary` 是基于 [_PhoenixBuilder_](https://github.com/LNSSPsd/PhoenixBuilder) 的一个增强库，其中已经包含了以下功能。
 - 方块实体支持
 - 全局资源管理中心
 - 高级游戏交互接口

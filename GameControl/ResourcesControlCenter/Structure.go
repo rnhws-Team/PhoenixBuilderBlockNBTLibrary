@@ -11,6 +11,7 @@ func (m *mcstructure) WriteRequest() {
 // 属于私有实现。
 func (m *mcstructure) writeResponce(data packet.StructureTemplateDataResponse) {
 	m.resp <- data
+	close(m.resp)
 }
 
 // 从管道读取结构请求的返回值

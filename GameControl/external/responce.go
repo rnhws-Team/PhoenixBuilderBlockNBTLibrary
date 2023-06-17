@@ -14,7 +14,9 @@ type Responce struct {
 	FuncReturn Return `json:"function_return"`
 }
 
-// AutoMarshal...
+// Marshal 提供了双向实现，
+// 以允许将 Responce 结构体编码/解码为二进制数据，
+// 然后在网络上进行传输
 func (r *Responce) Marshal(io encoding.IO) {
 	TestError(io.String(&r.Echo))
 	TestError(io.String(&r.FinishTime))

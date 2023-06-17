@@ -10,10 +10,10 @@ type RequestHeader struct {
 	Version string `json:"version"`
 	// 指代回声，用于使用者区别每个请求的响应包。
 	// 如果指定了此字段，
-	// 那么响应包中也会包含一个完全相同的 request_id 字段。
+	// 那么响应包中也会包含一个完全相同的 request_id 字段
 	Echo string `json:"request_id"`
 	// 指代是否返回当次请求对应的响应包。
-	// 当为假时，请求结果将不会送回，
+	// 当为假时，会返回一个响应包，但不含函数的返回值，
 	// 也不会存在回声
 	GetResponce bool `json:"get_responce"`
 	// 指代请求者，这并不是必须的
@@ -38,7 +38,9 @@ type Request struct {
 	Body   RequestBody   `json:"body"`   // 指定当次请求的详细信息
 }
 
-// AutoMarshal...
+// Marshal 提供了双向实现，
+// 以允许将 Request 结构体编码/解码为二进制数据，
+// 然后在网络上进行传输
 func (r *Request) Marshal(io encoding.IO) {
 	TestError(io.String(&r.Header.Version))
 	TestError(io.String(&r.Header.Echo))

@@ -120,29 +120,24 @@ type ContainerID uint8
 然后再发送相应数据包，完成后再释放此公用资源
 */
 type container struct {
-	// 容器被打开时的数据
-	containerOpen struct {
-		// 防止并发读写而设置的读写锁
-		lockDown sync.RWMutex
-		// 当客户端打开容器后，租赁服会以此数据包回应，届时此变量将被赋值。
-		// 当容器被关闭或从未被打开，则此变量将会为 nil
-		datas *packet.ContainerOpen
-	}
-	// 容器被关闭时的数据
-	containerClose struct {
-		// 防止并发读写而设置的读写锁
-		lockDown sync.RWMutex
-		/*
-			客户端可以使用该数据包关闭已经打开的容器，
-			而后，租赁服会以相同的数据包回应容器的关闭。
+	// 防止并发读写而安排的读写锁
+	lockDown sync.RWMutex
+	// 存放容器被打开时的数据。
+	// 当客户端打开容器后，租赁服会以此数据包回应，届时此变量将被赋值。
+	// 当容器被关闭或从未被打开，则此变量将会为 nil
+	containerOpenData *packet.ContainerOpen
+	/*
+		存放容器被关闭时的数据。
 
-			当侦测到来自租赁服的响应，此变量将被赋值。
-			当容器被打开或从未被关闭，则此变量将会为 nil
-		*/
-		datas *packet.ContainerClose
-	}
-	// 其他实现在打开或关闭容器后可能需要等待回应，此互斥锁便是为了完成这一实现
-	awaitChanges sync.Mutex
+		客户端可以使用该数据包关闭已经打开的容器，
+		而后，租赁服会以相同的数据包回应容器的关闭。
+
+		当侦测到来自租赁服的响应，此变量将被赋值。
+		当容器被打开或从未被关闭，则此变量将会为 nil
+	*/
+	containerCloseData *packet.ContainerClose
+	// 其他实现在打开或关闭容器后可能需要等待回应，此管道便是为了完成这一实现
+	responded chan bool
 	// 描述容器资源的占用状态及占用者
 	resourcesOccupy
 }
@@ -153,15 +148,8 @@ type container struct {
 type mcstructure struct {
 	// 描述结构资源的占用状态及占用者
 	resourcesOccupy
-	// 保存结构请求的返回值
-	responce struct {
-		// 防止并发读写而设置的读写锁
-		lockDown sync.RWMutex
-		// 当客户端请求结构数据后，租赁服会以此数据包回应，届时此变量将被赋值
-		datas *packet.StructureTemplateDataResponse
-	}
-	// 其他实现在请求结构后可能需要等待回应，此互斥锁便是为了完成这一实现
-	awaitChanges sync.Mutex
+	// 保存结构请求的响应体
+	resp chan packet.StructureTemplateDataResponse
 }
 
 // ------------------------- END -------------------------

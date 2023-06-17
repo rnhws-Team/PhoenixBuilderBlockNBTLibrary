@@ -1,6 +1,6 @@
 package external
 
-import "phoenixbuilder/encoding"
+import "phoenixbuilder/lib/encoding"
 
 // 描述单个请求所对应的响应
 type Responce struct {

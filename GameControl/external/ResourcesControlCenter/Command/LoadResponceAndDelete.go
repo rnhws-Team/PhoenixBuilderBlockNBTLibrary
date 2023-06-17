@@ -3,7 +3,7 @@ package external_resources_command
 import (
 	"phoenixbuilder/GameControl/GlobalAPI"
 	"phoenixbuilder/GameControl/external"
-	"phoenixbuilder/encoding"
+	"phoenixbuilder/lib/encoding"
 	"phoenixbuilder/minecraft/protocol/packet"
 
 	"github.com/google/uuid"

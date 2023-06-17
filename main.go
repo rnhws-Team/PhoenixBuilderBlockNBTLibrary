@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"phoenixbuilder/encoding"
+	"phoenixbuilder/lib/encoding"
 
 	"github.com/google/uuid"
 )

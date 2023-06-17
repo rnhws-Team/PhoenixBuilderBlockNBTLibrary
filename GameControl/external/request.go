@@ -1,7 +1,7 @@
 package external
 
 import (
-	"phoenixbuilder/encoding"
+	"phoenixbuilder/lib/encoding"
 )
 
 // 描述单次请求的基本信息

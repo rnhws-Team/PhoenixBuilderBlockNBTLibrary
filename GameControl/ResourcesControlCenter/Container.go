@@ -4,74 +4,76 @@ import (
 	"phoenixbuilder/minecraft/protocol/packet"
 )
 
-// 用于在 打开/关闭 容器前执行，
-// 便于后续调用 AwaitResponceAfterSendPacket 以阻塞程序的执行从而
-// 达到等待租赁服响应容器操作的目的
-func (c *container) AwaitResponceBeforeSendPacket() {
-	c.awaitChanges.Lock()
+// 用于在发送容器相关的数据包前执行，
+// 便于后续调用 AwaitChangesAfterSendPacket 以阻塞程序的执行从而
+// 达到等待租赁服响应容器操作的目的。
+//
+// 无论如何，即便不需要得到响应，也仍然需要使用此函数。
+func (c *container) AwaitChangesBeforeSendPacket() {
+	c.responded = make(chan bool, 1)
 }
 
-// 用于在 打开/关闭 容器后执行。
-// 用于等待租赁服响应容器的打开或关闭操作。
-// 在调用此函数后，会持续阻塞直到相关操作所对应的互斥锁被释放
-func (c *container) AwaitResponceAfterSendPacket() {
-	c.awaitChanges.Lock()
-	c.awaitChanges.Unlock()
+// 用于已经向租赁服提交容器操作后执行，
+// 以等待租赁服响应容器的打开或关闭操作。
+// 在调用此函数后，会持续阻塞直到相关的管道受到数据。
+//
+// 无论如何，即便不需要得到响应，也仍然需要使用此函数。
+func (c *container) AwaitChangesAfterSendPacket() {
+	<-c.responded
 }
 
-// 释放 c.awaitChanges 中关于容器操作的互斥锁。如果互斥锁未被锁定，程序也仍不会发生惊慌。
+// 向 c.responded 发送已响应的通知。
+// 如果容器资源未被占用，则通知不会被发送。
 // 当且仅当租赁服确认客户端的容器操作时，此函数才会被调用。
 // 属于私有实现
 func (c *container) responceContainerOperation() {
-	c.awaitChanges.TryLock()
-	c.awaitChanges.Unlock()
+	if c.GetOccupyStates() {
+		c.responded <- true
+		close(c.responded)
+	}
 }
 
-// 将 datas 写入 c.containerOpen.datas ，属于私有实现
-func (c *container) writeContainerOpenDatas(datas *packet.ContainerOpen) {
-	c.containerOpen.lockDown.Lock()
-	defer c.containerOpen.lockDown.Unlock()
-	// init
-	c.containerOpen.datas = datas
-	// set values
+// 向 c.containerOpenData 写入容器开启数据 data ，属于私有实现
+func (c *container) writeContainerOpenDatas(data *packet.ContainerOpen) {
+	c.lockDown.Lock()
+	defer c.lockDown.Unlock()
+	c.containerOpenData = data
 }
 
 // 取得当前已打开容器的数据。
 // 如果容器未被打开或已被关闭，则会返回 nil 。
 // 返回值虽然是一个地址，但它所指向的实际是一个副本
 func (c *container) GetContainerOpenDatas() *packet.ContainerOpen {
-	c.containerOpen.lockDown.RLock()
-	defer c.containerOpen.lockDown.RUnlock()
-	// init
-	if c.containerOpen.datas == nil {
+	c.lockDown.RLock()
+	defer c.lockDown.RUnlock()
+	// lock down
+	if c.containerOpenData == nil {
 		return nil
 	} else {
-		new := *c.containerOpen.datas
+		new := *c.containerOpenData
 		return &new
 	}
 	// return
 }
 
-// 将 datas 写入 c.containerClose.datas ，属于私有实现
-func (c *container) writeContainerCloseDatas(datas *packet.ContainerClose) {
-	c.containerClose.lockDown.Lock()
-	defer c.containerClose.lockDown.Unlock()
-	// init
-	c.containerClose.datas = datas
-	// set values
+// 向 c.containerCloseData 写入容器关闭数据 data ，属于私有实现
+func (c *container) writeContainerCloseDatas(data *packet.ContainerClose) {
+	c.lockDown.Lock()
+	defer c.lockDown.Unlock()
+	c.containerCloseData = data
 }
 
 // 取得上次关闭容器时租赁服的响应数据。
 // 如果现在有容器已被打开或容器从未被关闭，则会返回 nil 。
 // 返回值虽然是一个地址，但它所指向的实际是一个副本
 func (c *container) GetContainerCloseDatas() *packet.ContainerClose {
-	c.containerClose.lockDown.RLock()
-	defer c.containerClose.lockDown.RUnlock()
-	// init
-	if c.containerClose.datas == nil {
+	c.lockDown.RLock()
+	defer c.lockDown.RUnlock()
+	// lock down
+	if c.containerCloseData == nil {
 		return nil
 	} else {
-		new := *c.containerClose.datas
+		new := *c.containerCloseData
 		return &new
 	}
 	// return

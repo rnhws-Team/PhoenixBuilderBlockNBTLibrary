@@ -18,14 +18,14 @@ func (g *GlobalAPI) OpenContainer(
 	blockStates map[string]interface{},
 	hotBarSlotID uint8,
 ) (bool, error) {
-	g.Resources.Container.AwaitResponceBeforeSendPacket()
+	g.Resources.Container.AwaitChangesBeforeSendPacket()
 	// await responce before send packet
 	err := g.ClickBlock(hotBarSlotID, pos, blockName, blockStates, false)
 	if err != nil {
 		return false, fmt.Errorf("OpenContainer: %v", err)
 	}
 	// open container
-	g.Resources.Container.AwaitResponceAfterSendPacket()
+	g.Resources.Container.AwaitChangesAfterSendPacket()
 	// wait changes
 	if g.Resources.Container.GetContainerOpenDatas() == nil {
 		return false, nil
@@ -42,7 +42,7 @@ func (g *GlobalAPI) OpenContainer(
 请确保打开前占用了容器资源，否则会造成程序惊慌。
 */
 func (g *GlobalAPI) OpenInventory() (bool, error) {
-	g.Resources.Container.AwaitResponceBeforeSendPacket()
+	g.Resources.Container.AwaitChangesBeforeSendPacket()
 	// await responce before send packet
 	err := g.WritePacket(&packet.Interact{
 		ActionType:            packet.InteractActionOpenInventory,
@@ -52,7 +52,7 @@ func (g *GlobalAPI) OpenInventory() (bool, error) {
 		return false, fmt.Errorf("OpenInventory: %v", err)
 	}
 	// open inventory
-	g.Resources.Container.AwaitResponceAfterSendPacket()
+	g.Resources.Container.AwaitChangesAfterSendPacket()
 	// wait changes
 	if g.Resources.Container.GetContainerOpenDatas() == nil {
 		return false, nil
@@ -72,7 +72,7 @@ var ErrContainerNerverOpened error = fmt.Errorf("CloseContainer: Container have 
 返回值的第一项代表执行结果，为真时容器被成功关闭，否则反之
 */
 func (g *GlobalAPI) CloseContainer() (bool, error) {
-	g.Resources.Container.AwaitResponceBeforeSendPacket()
+	g.Resources.Container.AwaitChangesBeforeSendPacket()
 	// await responce before send packet
 	if g.Resources.Container.GetContainerOpenDatas() == nil {
 		return false, ErrContainerNerverOpened
@@ -86,7 +86,7 @@ func (g *GlobalAPI) CloseContainer() (bool, error) {
 		return false, fmt.Errorf("CloseContainer: %v", err)
 	}
 	// close container
-	g.Resources.Container.AwaitResponceAfterSendPacket()
+	g.Resources.Container.AwaitChangesAfterSendPacket()
 	// wait changes
 	if g.Resources.Container.GetContainerCloseDatas() == nil {
 		return false, nil

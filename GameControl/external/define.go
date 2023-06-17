@@ -2,7 +2,7 @@ package external
 
 import (
 	"phoenixbuilder/GameControl/GlobalAPI"
-	"phoenixbuilder/encoding"
+	"phoenixbuilder/lib/encoding"
 )
 
 // 指代当前引擎的数据版本。

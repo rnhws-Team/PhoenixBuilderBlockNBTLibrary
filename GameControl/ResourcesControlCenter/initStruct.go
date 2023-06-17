@@ -24,57 +24,37 @@ func (r *Resources) Init() func(pk *packet.Packet) {
 	// test if has been inited
 	r.verified = true
 	// verified
-	r.Command = commandRequestWithResponce{
-		requestWithResponce: sync.Map{},
-	}
-	// Command
-	r.Inventory = inventoryContents{
-		lockDown: sync.RWMutex{},
-		datas:    make(map[uint32]map[uint8]protocol.ItemInstance),
-	}
-	// Inventory
-	r.ItemStackOperation = itemStackReuqestWithResponce{
-		requestWithResponce: sync.Map{},
-		currentRequestID:    1,
-	}
-	// ItemStackOperation
-	r.Container = container{
-		containerOpen: struct {
-			lockDown sync.RWMutex
-			datas    *packet.ContainerOpen
-		}{
+	*r = Resources{
+		Command: commandRequestWithResponce{
+			requestWithResponce: sync.Map{},
+		},
+		Inventory: inventoryContents{
 			lockDown: sync.RWMutex{},
-			datas:    nil,
+			datas:    make(map[uint32]map[uint8]protocol.ItemInstance),
 		},
-		containerClose: struct {
-			lockDown sync.RWMutex
-			datas    *packet.ContainerClose
-		}{
-			lockDown: sync.RWMutex{},
-			datas:    nil,
+		ItemStackOperation: itemStackReuqestWithResponce{
+			requestWithResponce: sync.Map{},
+			currentRequestID:    1,
 		},
-		awaitChanges: sync.Mutex{},
-		resourcesOccupy: resourcesOccupy{
-			lockDown: sync.Mutex{},
-			holder:   "",
+		Container: container{
+			lockDown:           sync.RWMutex{},
+			containerOpenData:  nil,
+			containerCloseData: nil,
+			responded:          make(chan bool, 1),
+			resourcesOccupy: resourcesOccupy{
+				lockDown: sync.Mutex{},
+				holder:   "",
+			},
+		},
+		Structure: mcstructure{
+			resourcesOccupy: resourcesOccupy{
+				lockDown: sync.Mutex{},
+				holder:   "",
+			},
+			resp: make(chan packet.StructureTemplateDataResponse, 1),
 		},
 	}
-	// Container
-	r.Structure = mcstructure{
-		resourcesOccupy: resourcesOccupy{
-			lockDown: sync.Mutex{},
-			holder:   "",
-		},
-		responce: struct {
-			lockDown sync.RWMutex
-			datas    *packet.StructureTemplateDataResponse
-		}{
-			lockDown: sync.RWMutex{},
-			datas:    nil,
-		},
-		awaitChanges: sync.Mutex{},
-	}
-	// Structure
+	// init struct
 	return r.handlePacket
 	// return
 }

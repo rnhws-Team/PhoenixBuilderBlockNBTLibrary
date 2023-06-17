@@ -38,7 +38,7 @@ func (r *Resources) handlePacket(pk *packet.Packet) {
 				r.ItemStackOperation.updateItemData(value, &r.Inventory)
 			}
 			// update local inventory datas
-			r.ItemStackOperation.tryToWriteResponce(value.RequestID, value)
+			r.ItemStackOperation.writeResponce(value.RequestID, value)
 			// write responce
 		}
 		// item stack request
@@ -66,9 +66,10 @@ func (r *Resources) handlePacket(pk *packet.Packet) {
 		r.Container.responceContainerOperation()
 		// while a container is closed
 	case *packet.StructureTemplateDataResponse:
-		if r.Structure.GetOccupyStates() {
-			r.Structure.writeStructureResponce(p)
+		if !r.Structure.GetOccupyStates() {
+			panic("handlePacket: Attempt to send packet.StructureTemplateDataRequest without using ResourcesControlCenter")
 		}
+		r.Structure.writeResponce(*p)
 		// packet.StructureTemplateDataRequest
 	}
 }

@@ -29,20 +29,21 @@ func (i *itemStackReuqestWithResponce) WriteRequest(
 	// return
 }
 
-// 尝试向请求 ID 为 key 的物品操作写入返回值 resp 。
+// 向请求 ID 为 key 的物品操作写入返回值 resp 。
+// 当 key 不存在时，将会抛出程序惊慌。
 // 属于私有实现。
-func (i *itemStackReuqestWithResponce) tryToWriteResponce(
+func (i *itemStackReuqestWithResponce) writeResponce(
 	key int32,
 	resp protocol.ItemStackResponse,
 ) {
 	value, exist := i.requestWithResponce.Load(key)
 	if !exist {
-		panic("handlePacket: Attempt to send packet.ItemStackRequest without using ResourcesControlCenter")
+		panic("writeResponce: Attempt to send packet.ItemStackRequest without using ResourcesControlCenter")
 	}
 	// if key is not exist
 	get, normal := value.(singleItemStackRequestWithResponce)
 	if !normal {
-		panic(fmt.Sprintf("tryToWriteResponce: Failed to convert value into singleItemStackRequestWithResponce; value = %#v", value))
+		panic(fmt.Sprintf("writeResponce: Failed to convert value into singleItemStackRequestWithResponce; value = %#v", value))
 	}
 	// convert data
 	get.resp <- resp

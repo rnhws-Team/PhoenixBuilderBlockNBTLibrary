@@ -43,7 +43,7 @@ func (g *GlobalAPI) sendCommandPrivate(
 	err := g.WritePacket(&packet.CommandRequest{
 		CommandLine: command,
 		CommandOrigin: protocol.CommandOrigin{
-			Origin:    protocol.CommandOriginPlayer,
+			Origin:    origin,
 			UUID:      uniqueId,
 			RequestID: requestId.String(),
 		},

@@ -73,12 +73,12 @@ func (g *GlobalAPI) sendCMDWithRespPrivate(
 	// 写入请求到等待队列
 	err = g.sendCommandPrivate(command, uniqueId, origin)
 	if err != nil {
-		return packet.CommandOutput{}, fmt.Errorf("SendCommandWithResponce: %v", err)
+		return packet.CommandOutput{}, fmt.Errorf("sendCMDWithRespPrivate: %v", err)
 	}
 	// 发送命令
 	ans, err := g.Resources.Command.LoadResponceAndDelete(uniqueId)
 	if err != nil {
-		return packet.CommandOutput{}, fmt.Errorf("SendCommandWithResponce: %v", err)
+		return packet.CommandOutput{}, fmt.Errorf("sendCMDWithRespPrivate: %v", err)
 	}
 	// 等待租赁服响应命令请求并取得命令请求的返回值
 	return ans, nil
@@ -87,20 +87,36 @@ func (g *GlobalAPI) sendCMDWithRespPrivate(
 
 // 以玩家的身份向租赁服发送命令且无视返回值
 func (g *GlobalAPI) SendCommand(command string, uniqueId uuid.UUID) error {
-	return g.sendCommandPrivate(command, uniqueId, protocol.CommandOriginPlayer)
+	err := g.sendCommandPrivate(command, uniqueId, protocol.CommandOriginPlayer)
+	if err != nil {
+		return fmt.Errorf("SendCommand: %v", err)
+	}
+	return nil
 }
 
 // 向租赁服发送 WS 命令且无视返回值
 func (g *GlobalAPI) SendWSCommand(command string, uniqueId uuid.UUID) error {
-	return g.sendCommandPrivate(command, uniqueId, protocol.CommandOriginAutomationPlayer)
+	err := g.sendCommandPrivate(command, uniqueId, protocol.CommandOriginAutomationPlayer)
+	if err != nil {
+		return fmt.Errorf("SendWSCommand: %v", err)
+	}
+	return nil
 }
 
 // 以玩家的身份向租赁服发送命令且获取返回值
 func (g *GlobalAPI) SendCommandWithResponce(command string) (packet.CommandOutput, error) {
-	return g.sendCMDWithRespPrivate(command, protocol.CommandOriginPlayer)
+	resp, err := g.sendCMDWithRespPrivate(command, protocol.CommandOriginPlayer)
+	if err != nil {
+		return packet.CommandOutput{}, fmt.Errorf("SendCommandWithResponce: %v", err)
+	}
+	return resp, nil
 }
 
 // 向租赁服发送 WS 命令且获取返回值
 func (g *GlobalAPI) SendWSCommandWithResponce(command string) (packet.CommandOutput, error) {
-	return g.sendCMDWithRespPrivate(command, protocol.CommandOriginAutomationPlayer)
+	resp, err := g.sendCMDWithRespPrivate(command, protocol.CommandOriginAutomationPlayer)
+	if err != nil {
+		return packet.CommandOutput{}, fmt.Errorf("SendWSCommandWithResponce: %v", err)
+	}
+	return resp, nil
 }

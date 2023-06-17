@@ -34,7 +34,7 @@ type Datas struct {
 	Others interface{}
 }
 
-// BlockEntityDatas 是用于包装每个方块实体的结构体
+// Package 是用于包装每个方块实体的结构体
 type Package struct {
 	// 储存执行该方块状态放置所需的 API ，例如发包需要用到的函数等
 	// 此参数需要外部实现主动赋值，

@@ -73,7 +73,7 @@ func (g *GlobalAPI) ChangeItemNameByUsingAnvil(
 		return []AnvilOperationResponce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: Could not convert got into map[string]interface{}; got = %#v", got)
 	}
 	// 获取要求放置的铁砧的方块状态
-	err = g.ChangeSelectedHotbarSlot(hotBarSlotID, true)
+	err = g.ChangeSelectedHotbarSlot(hotBarSlotID)
 	if err != nil {
 		return []AnvilOperationResponce{}, fmt.Errorf("ChangeItemNameByUsingAnvil: %v", err)
 	}
@@ -89,7 +89,14 @@ func (g *GlobalAPI) ChangeItemNameByUsingAnvil(
 	defer func() {
 		g.CloseContainer()
 		// 关闭铁砧
-		g.RevertBlocks(uniqueId, correctPos)
+		g.RevertStructure(
+			uniqueId,
+			BlockPos{
+				correctPos[0],
+				correctPos[1] - 1,
+				correctPos[2],
+			},
+		)
 		// 恢复铁砧下方的承重方块为原本方块
 	}()
 	// 退出时应该被调用的函数

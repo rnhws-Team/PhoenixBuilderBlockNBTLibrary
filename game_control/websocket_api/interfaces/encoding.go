@@ -1,4 +1,4 @@
-package encoding
+package interfaces
 
 import (
 	"bytes"
@@ -26,21 +26,21 @@ type GetBuffer interface {
 // 当传入 encoding.Reader 时，数据将从 encoding.Reader 解码至 x ；
 // 当传入 encoding.Writer 时，x 将被编码至 encoding.Writer
 type AutoMarshal interface {
-	Slice(x *[]byte) error
-	String(x *string) error
-	StringSlice(x *[]string) error
-	Map(x *map[string][]byte) error
-	Bool(x *bool) error
-	Uint8(x *uint8) error
-	Int8(x *int8) error
-	Uint16(x *uint16) error
-	Int16(x *int16) error
-	Uint32(x *uint32) error
-	Int32(x *int32) error
-	Uint64(x *uint64) error
-	Int64(x *int64) error
+	Uint8(x *uint8)
+	Uint16(x *uint16)
+	Uint32(x *uint32)
+	Uint64(x *uint64)
 
-	UUID(x *uuid.UUID) error
-	CommandOutputMessage(x *protocol.CommandOutputMessage) error
-	CommandOutputMessageSlice(x *[]protocol.CommandOutputMessage) error
+	Int8(x *int8)
+	Int16(x *int16)
+	Int32(x *int32)
+	Int64(x *int64)
+
+	Bool(x *bool)
+	String(x *string)
+	StringSlice(x *[]string)
+
+	UUID(x *uuid.UUID)
+	CommandOutputMessage(x *protocol.CommandOutputMessage)
+	CommandOutputMessageSlice(x *[]protocol.CommandOutputMessage)
 }

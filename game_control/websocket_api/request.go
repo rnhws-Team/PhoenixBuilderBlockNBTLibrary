@@ -1,7 +1,7 @@
-package external
+package websocket_api
 
 import (
-	"phoenixbuilder/lib/encoding"
+	"phoenixbuilder/game_control/websocket_api/interfaces"
 )
 
 // 描述单次请求的基本信息
@@ -26,10 +26,10 @@ type RequestHeader struct {
 
 // 描述单次请求的详细信息
 type RequestBody struct {
-	Module    string `json:"module"`         // 指代要访问的模块
-	SubModule string `json:"sub_module"`     // 指代要访问的子模块
-	FuncName  string `json:"function_name"`  // 指代要访问的函数
-	FuncInput Input  `json:"function_input"` // 指代要向函数传入的参数
+	Module    string           `json:"module"`         // 指代要访问的模块
+	SubModule string           `json:"sub_module"`     // 指代要访问的子模块
+	FuncName  string           `json:"function_name"`  // 指代要访问的函数
+	FuncInput interfaces.Input `json:"function_input"` // 指代要向函数传入的参数
 }
 
 // 描述单个的请求
@@ -41,17 +41,15 @@ type Request struct {
 // Marshal 提供了双向实现，
 // 以允许将 Request 结构体编码/解码为二进制数据，
 // 然后在网络上进行传输
-func (r *Request) Marshal(io encoding.IO) {
-	TestError(io.String(&r.Header.Version))
-	TestError(io.String(&r.Header.Echo))
-	TestError(io.Bool(&r.Header.GetResponce))
-	TestError(io.String(&r.Header.Requester))
-	TestError(io.Bool(&r.Header.PrintRunningSituation))
-	TestError(io.Bool(&r.Header.SuppressError))
-	// header
-	TestError(io.String(&r.Body.Module))
-	TestError(io.String(&r.Body.SubModule))
-	TestError(io.String(&r.Body.FuncName))
-	r.Body.FuncInput.Marshal(io)
-	// body
+func (r *Request) Marshal(io interfaces.IO) {
+	io.String(&r.Header.Version)
+	io.String(&r.Header.Echo)
+	io.Bool(&r.Header.GetResponce)
+	io.String(&r.Header.Requester)
+	io.Bool(&r.Header.PrintRunningSituation)
+	io.Bool(&r.Header.SuppressError)
+	io.String(&r.Body.Module)
+	io.String(&r.Body.SubModule)
+	io.String(&r.Body.FuncName)
+	r.Body.FuncInput.AutoMarshal(io)
 }

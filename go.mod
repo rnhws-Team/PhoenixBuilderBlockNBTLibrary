@@ -28,6 +28,7 @@ replace rogchap.com/v8go v0.7.0 => ./depends/v8go@v0.7.0
 
 require (
 	github.com/andybalholm/brotli v1.0.5
+	github.com/cheggaaa/pb v1.0.29
 	github.com/df-mc/goleveldb v1.1.9
 	github.com/go-gl/mathgl v1.0.0
 	github.com/google/go-cmp v0.5.8 // indirect
